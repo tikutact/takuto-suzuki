@@ -25,5 +25,5 @@ export default function PageTransition({ children }: { children: React.ReactNode
     mounted.current = true;
   }, [pathname]);
 
-  return <div ref={ref}>{children}</div>;
+  return <div ref={ref} style={{ opacity: 0 }}>{children}</div>;
 }
