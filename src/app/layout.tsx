@@ -13,6 +13,9 @@ const ebGaramond = EB_Garamond({
 export const metadata: Metadata = {
   title: "TAKUTO SUZUKI — Photographer",
   description: "Photography portfolio of Takuto Suzuki.",
+  verification: {
+    google: "eTUWPhodK0Lv2sK970oRWlhWy9QHQpbodWo0R1cHCq0",
+  },
 };
 
 export default function RootLayout({
