@@ -14,7 +14,7 @@ const mobileSlides = [
   { src: "/images/featured-flower.jpg", alt: "Photo 1" },
   { src: "/images/featured-red.jpg", alt: "Photo 2" },
   { src: "/images/featured-clip.jpg", alt: "Photo 3" },
-  { src: "/images/featured-4.jpg", alt: "Photo 4" },
+  { src: "/images/featured-butterfly.jpg", alt: "Photo 4" },
 ];
 
 export default function Home() {
