@@ -13,7 +13,7 @@ const slides = [
 const mobileSlides = [
   { src: "/images/featured-flower.jpg", alt: "Photo 1" },
   { src: "/images/featured-red.jpg", alt: "Photo 2" },
-  { src: "/images/featured-3.jpg", alt: "Photo 3" },
+  { src: "/images/featured-clip.jpg", alt: "Photo 3" },
   { src: "/images/featured-4.jpg", alt: "Photo 4" },
 ];
 
