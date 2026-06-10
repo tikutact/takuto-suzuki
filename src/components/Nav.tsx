@@ -13,7 +13,7 @@ const links = [
 
 const series = [
   { slug: "cast", title: "cast" },
-  { slug: "stir", title: "stir" },
+  { slug: "sway", title: "sway" },
   { slug: "ordinary", title: "ordinary" },
 ];
 
