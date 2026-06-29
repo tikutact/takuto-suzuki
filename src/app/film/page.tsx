@@ -4,18 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const videos = [
-  "dappled.mp4",
-  "wallpapers.mp4",
-  "spring.mp4",
-  "moment.mp4",
-  "carpet.mp4",
-  "glowing.mp4",
-  "swallows.mp4",
   "trees.mp4",
-  "read.mp4",
   "breeze.mp4",
-  "taller.mp4",
+  "read.mp4",
+  "lightbeautiful.mp4",
   "curtain.mp4",
+  "taller.mp4",
+  "home.mp4",
+  "swallows.mp4",
+  "glowing.mp4",
+  "carpet.mp4",
+  "moment.mp4",
+  "spring.mp4",
+  "wallpapers.mp4",
+  "dappled.mp4",
 ];
 
 function VideoCell({ src, onClick }: { src: string; onClick: () => void }) {
