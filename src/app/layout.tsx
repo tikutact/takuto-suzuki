@@ -11,6 +11,7 @@ const ebGaramond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.takutosuzuki.com"),
   title: "TAKUTO SUZUKI — Photographer",
   description: "Photography portfolio of Takuto Suzuki.",
   verification: {
