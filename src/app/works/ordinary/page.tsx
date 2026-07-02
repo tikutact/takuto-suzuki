@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
+import { seriesLd, breadcrumb } from "@/lib/structured-data";
 
 // reordered: wall light patterns (02/03/05) separated, still life (07/09) separated
 const photos = [
@@ -18,6 +20,14 @@ const photos = [
 export default function Ordinary() {
   return (
     <div className="pt-8 pb-16 md:pt-24 md:pb-24">
+      <JsonLd data={seriesLd({ slug: "ordinary", name: "ordinary", year: "2026", images: photos })} />
+      <JsonLd
+        data={breadcrumb([
+          { name: "Home", path: "/" },
+          { name: "Works", path: "/works" },
+          { name: "ordinary", path: "/works/ordinary" },
+        ])}
+      />
       <div className="max-w-4xl mx-auto px-6">
         <div className="mb-16">
           <h1 className="text-2xl font-light mb-2">ordinary</h1>

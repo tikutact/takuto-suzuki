@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumb } from "@/lib/structured-data";
 
 const videos = [
   "trees.mp4",
@@ -122,6 +124,12 @@ export default function Film() {
 
   return (
     <>
+      <JsonLd
+        data={breadcrumb([
+          { name: "Home", path: "/" },
+          { name: "Film", path: "/film" },
+        ])}
+      />
       <div className="min-h-screen py-10 px-6 md:py-16 md:px-12">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
           {videos.map((v) => (

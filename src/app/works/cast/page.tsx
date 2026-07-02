@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
+import { seriesLd, breadcrumb } from "@/lib/structured-data";
 
 // reordered: mix portrait/landscape, frosted glass (08/06) separated
 const photos = [
@@ -17,6 +19,14 @@ const photos = [
 export default function Cast() {
   return (
     <div className="pt-8 pb-16 md:pt-24 md:pb-24">
+      <JsonLd data={seriesLd({ slug: "cast", name: "cast", year: "2026", images: photos })} />
+      <JsonLd
+        data={breadcrumb([
+          { name: "Home", path: "/" },
+          { name: "Works", path: "/works" },
+          { name: "cast", path: "/works/cast" },
+        ])}
+      />
       <div className="max-w-4xl mx-auto px-6">
         <div className="mb-16">
           <h1 className="text-2xl font-light mb-2">cast</h1>

@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
+import { seriesLd, breadcrumb } from "@/lib/structured-data";
 
 // reordered: mix portrait/landscape, white-surface branch shots separated
 // silhouette (12) opens, yellow line (10) as mid-punctuation
@@ -21,6 +23,14 @@ const photos = [
 export default function Stir() {
   return (
     <div className="pt-8 pb-16 md:pt-24 md:pb-24">
+      <JsonLd data={seriesLd({ slug: "sway", name: "sway", year: "2026", images: photos })} />
+      <JsonLd
+        data={breadcrumb([
+          { name: "Home", path: "/" },
+          { name: "Works", path: "/works" },
+          { name: "sway", path: "/works/sway" },
+        ])}
+      />
       <div className="max-w-4xl mx-auto px-6">
         <div className="mb-16">
           <h1 className="text-2xl font-light mb-2">sway</h1>

@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumb } from "@/lib/structured-data";
 
 const series = [
   {
@@ -25,6 +27,12 @@ const series = [
 export default function Works() {
   return (
     <div className="pt-6 pb-16 md:pt-16 md:pb-24">
+      <JsonLd
+        data={breadcrumb([
+          { name: "Home", path: "/" },
+          { name: "Works", path: "/works" },
+        ])}
+      />
       <div className="space-y-16">
         {series.map(({ slug, title, year, cover }) => (
           <Link key={slug} href={`/works/${slug}`} className="group block px-4 md:pl-0 md:pr-8">

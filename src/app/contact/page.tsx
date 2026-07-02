@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumb } from "@/lib/structured-data";
 
 export default function Contact() {
   const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
@@ -27,6 +29,12 @@ export default function Contact() {
 
   return (
     <div className="pt-8 pb-16 md:pt-24 md:pb-24">
+      <JsonLd
+        data={breadcrumb([
+          { name: "Home", path: "/" },
+          { name: "Contact", path: "/contact" },
+        ])}
+      />
       <div className="max-w-xl mx-auto px-6">
         <h1 className="text-xs tracking-[0.4em] uppercase text-neutral-400 mb-4">
           Contact
