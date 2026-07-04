@@ -11,10 +11,10 @@ const series = [
     cover: "/images/cast-02.jpg",
   },
   {
-    slug: "sway",
-    title: "sway",
+    slug: "trace",
+    title: "trace",
     year: "2026",
-    cover: "/images/sway-11.jpg",
+    cover: "/images/trace-11.jpg",
   },
   {
     slug: "ordinary",
