@@ -76,9 +76,13 @@ export function seriesLd(series: {
   };
 }
 
-// Journal posts (src/lib/journal.ts). date "YYYY-MM" is padded to "YYYY-MM-01".
-function fullDate(date: string): string {
-  return /^\d{4}-\d{2}$/.test(date) ? `${date}-01` : date;
+// Journal posts (src/lib/journal.ts). "YYYY-MM" is padded to "YYYY-MM-01",
+// a full "YYYY-MM-DD" passes through as-is. Anything else returns undefined
+// rather than emitting a non-ISO date into JSON-LD / the sitemap.
+export function fullDate(date: string): string | undefined {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  if (/^\d{4}-\d{2}$/.test(date)) return `${date}-01`;
+  return undefined;
 }
 
 // Structurally matches JournalPost (src/lib/journal.ts) without importing it
@@ -100,7 +104,7 @@ export function articleLd(post: ArticleLdInput): Record<string, unknown> {
     "@type": "BlogPosting",
     headline: post.title,
     ...(image ? { image: absoluteUrl(image) } : {}),
-    datePublished: fullDate(post.date),
+    ...(fullDate(post.date) ? { datePublished: fullDate(post.date) } : {}),
     ...(post.excerpt ? { description: post.excerpt } : {}),
     author: person,
     publisher: person,

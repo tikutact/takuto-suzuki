@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
+import BackLink from "@/components/BackLink";
 import { seriesLd, breadcrumb } from "@/lib/structured-data";
 
 // reordered: wall light patterns (02/03/05) separated, still life (07/09) separated
@@ -50,14 +50,7 @@ export default function Ordinary() {
           ))}
         </div>
 
-        <div className="mt-20 border-t border-neutral-100 pt-8">
-          <Link
-            href="/works"
-            className="text-xs tracking-[0.2em] uppercase text-neutral-400 hover:text-black transition-colors"
-          >
-            ← Works
-          </Link>
-        </div>
+        <BackLink href="/works" label="Works" />
       </div>
     </div>
   );

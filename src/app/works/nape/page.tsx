@@ -1,5 +1,5 @@
-import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
+import BackLink from "@/components/BackLink";
 import { seriesLd, breadcrumb } from "@/lib/structured-data";
 
 export default function Nape() {
@@ -21,14 +21,7 @@ export default function Nape() {
           </p>
         </div>
 
-        <div className="mt-20 border-t border-neutral-100 pt-8">
-          <Link
-            href="/works"
-            className="text-xs tracking-[0.2em] uppercase text-neutral-400 hover:text-black transition-colors"
-          >
-            ← Works
-          </Link>
-        </div>
+        <BackLink href="/works" label="Works" />
       </div>
     </div>
   );

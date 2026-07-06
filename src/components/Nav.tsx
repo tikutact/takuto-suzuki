@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const links = [
   { href: "/works", label: "Works" },
   { href: "/film", label: "Film" },
+  { href: "/journal", label: "Journal" },
   { href: "/biography", label: "Biography" },
   { href: "/contact", label: "Contact" },
 ];
@@ -20,10 +21,12 @@ const series = [
 export default function Nav() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
-  useEffect(() => {
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMenuOpen(false);
-  }, [pathname]);
+  }
 
   return (
     <>
@@ -109,7 +112,7 @@ export default function Nav() {
             <span className={`block w-5 h-px bg-black transition-all duration-200 ${menuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
           </button>
         </div>
-        <div className={`overflow-hidden transition-all duration-300 ${menuOpen ? "max-h-64 border-t border-neutral-100" : "max-h-0"}`}>
+        <div className={`overflow-hidden transition-all duration-300 ${menuOpen ? "max-h-96 border-t border-neutral-100" : "max-h-0"}`}>
           <ul className="px-6 py-5 flex flex-col gap-4">
             {links.map(({ href, label }) => (
               <li key={href}>
