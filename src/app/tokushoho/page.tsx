@@ -4,8 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "特定商取引法に基づく表記 — TAKUTO SUZUKI",
   description: "特定商取引法に基づく表記",
-  // 販売開始まで非公開（公開時に外す。特商法ページは公開後もsitemap/Navには載せず/shopからのリンクのみ）
-  robots: { index: false, follow: false },
+  // sitemap/Navには載せず/shopからのリンクのみ
 };
 
 const entries: { label: string; value: React.ReactNode }[] = [

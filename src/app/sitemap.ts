@@ -12,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/works/nape",
     "/film",
     "/journal",
+    "/shop",
     "/biography",
     "/contact",
   ].map((path) => ({

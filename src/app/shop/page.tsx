@@ -11,9 +11,8 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Shop — TAKUTO SUZUKI",
-  description: "Photo zines and printed works by Takuto Suzuki.",
-  // 販売開始まで非公開（公開時に外し、sitemap/Navへ追加する）
-  robots: { index: false, follow: false },
+  description:
+    "Photo books and printed works by Takuto Suzuki. Fade, Stay — first photo book, edition of 50.",
 };
 
 export default async function Shop() {
