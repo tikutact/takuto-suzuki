@@ -65,7 +65,7 @@ export default function Shop() {
                 <div className="w-full border border-neutral-200 py-3 text-xs tracking-[0.3em] uppercase text-neutral-300 text-center">
                   Sold Out
                 </div>
-              ) : product.paymentLink ? (
+              ) : product.paymentLink && product.price !== null ? (
                 <a
                   href={product.paymentLink}
                   className="block w-full border border-black py-3 text-xs tracking-[0.3em] uppercase text-center hover:bg-black hover:text-white transition-colors duration-300"
