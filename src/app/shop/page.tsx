@@ -4,6 +4,10 @@ import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumb } from "@/lib/structured-data";
 import { products } from "@/lib/shop";
+import { getSoldCount } from "@/lib/stripe";
+
+// Stripeの販売数を定期的に取り直して自動Sold Out判定する
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Shop — TAKUTO SUZUKI",
@@ -12,7 +16,16 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function Shop() {
+export default async function Shop() {
+  const soldOutFlags = await Promise.all(
+    products.map(async (product) => {
+      if (product.soldOut) return true;
+      if (!product.paymentLinkId) return false;
+      const sold = await getSoldCount(product.paymentLinkId);
+      return sold !== null && sold >= product.edition;
+    })
+  );
+
   return (
     <div className="pt-8 pb-16 md:pt-24 md:pb-24">
       <JsonLd
@@ -27,7 +40,7 @@ export default function Shop() {
         </h1>
 
         <div className="space-y-24">
-          {products.map((product) => (
+          {products.map((product, i) => (
             <section key={product.slug}>
               <div className="relative aspect-[182/257] bg-neutral-100 overflow-hidden mb-8">
                 {product.images[0] && (
@@ -61,7 +74,7 @@ export default function Shop() {
                   : "Price TBD"}
               </p>
 
-              {product.soldOut ? (
+              {soldOutFlags[i] ? (
                 <div className="w-full border border-neutral-200 py-3 text-xs tracking-[0.3em] uppercase text-neutral-300 text-center">
                   Sold Out
                 </div>

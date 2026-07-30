@@ -5,6 +5,11 @@ export type Product = {
   price: number | null;
   /** Stripe Payment Link のURL。null の間は購入ボタンが無効になる */
   paymentLink: string | null;
+  /** Payment LinkのID（plink_...）。設定するとStripeの販売数で自動Sold Out判定 */
+  paymentLinkId: string | null;
+  /** 販売部数。Stripeの販売数がここに達すると自動でSold Out表示 */
+  edition: number;
+  /** 手動の売り切れフラグ（自動判定と併用・どちらかが真ならSold Out） */
   soldOut: boolean;
   specs: string[];
   description: string;
@@ -18,6 +23,8 @@ export const products: Product[] = [
     title: "fade, stay",
     price: null,
     paymentLink: null,
+    paymentLinkId: null,
+    edition: 10,
     soldOut: false,
     specs: [
       "Photo zine",
