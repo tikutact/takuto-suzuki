@@ -24,13 +24,13 @@ export const products: Product[] = [
     price: null,
     paymentLink: null,
     paymentLinkId: null,
-    edition: 10,
+    edition: 50,
     soldOut: false,
     specs: [
       "Photo zine",
       "B5 / 32 pages",
       "Saddle-stitched with silver thread",
-      "Edition of 10",
+      "Edition of 50",
     ],
     description:
       "消えかけている光と、そこに留まるもの。日常の中で見過ごされていく一瞬を綴じた2冊目のZINE。",
