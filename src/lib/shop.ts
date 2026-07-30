@@ -7,7 +7,9 @@ export type Product = {
   paymentLink: string | null;
   /** Payment LinkのID（plink_...）。設定するとStripeの販売数で自動Sold Out判定 */
   paymentLinkId: string | null;
-  /** 販売部数。Stripeの販売数がここに達すると自動でSold Out表示 */
+  /** オンライン販売枠。Stripeの販売数がここに達すると自動でSold Out表示
+   *（作品の総エディション数はspecsの表記。店頭販売分はここに含めない。
+   *  Payment Linkの支払い回数上限もこの数に合わせる） */
   edition: number;
   /** 手動の売り切れフラグ（自動判定と併用・どちらかが真ならSold Out） */
   soldOut: boolean;
@@ -24,7 +26,7 @@ export const products: Product[] = [
     price: 2500,
     paymentLink: null,
     paymentLinkId: null,
-    edition: 50,
+    edition: 20,
     soldOut: false,
     specs: [
       "Photo zine",
