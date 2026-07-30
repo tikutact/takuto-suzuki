@@ -21,7 +21,7 @@ export const products: Product[] = [
   {
     slug: "fade-stay",
     title: "fade, stay",
-    price: null,
+    price: 2500,
     paymentLink: null,
     paymentLinkId: null,
     edition: 50,
