@@ -34,26 +34,30 @@ export default async function Shop() {
           { name: "Shop", path: "/shop" },
         ])}
       />
-      <div className="max-w-xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-6">
         <h1 className="text-xs tracking-[0.4em] uppercase text-neutral-400 mb-16">
           Shop
         </h1>
 
         <div className="space-y-24">
           {products.map((product, i) => (
-            <section key={product.slug}>
-              <div className="relative aspect-[182/257] bg-neutral-100 overflow-hidden mb-8">
+            <section
+              key={product.slug}
+              className="md:grid md:grid-cols-[5fr_6fr] md:gap-12 md:items-start"
+            >
+              <div className="relative aspect-[182/257] bg-neutral-100 overflow-hidden mb-8 md:mb-0">
                 {product.images[0] && (
                   <Image
                     src={product.images[0]}
                     alt={product.title}
                     fill
-                    sizes="(min-width: 768px) 576px, 100vw"
+                    sizes="(min-width: 768px) 400px, 100vw"
                     className="object-cover"
                   />
                 )}
               </div>
 
+              <div>
               <h2 className="text-lg tracking-wide mb-4">{product.title}</h2>
 
               <ul className="space-y-1 mb-6">
@@ -64,8 +68,21 @@ export default async function Shop() {
                 ))}
               </ul>
 
-              <p className="text-sm text-neutral-600 leading-relaxed mb-8">
-                {product.description}
+              {/* 折り返しは読点単位（inline-block）に制御し、行末に助詞だけ残る事故を防ぐ */}
+              <p className="text-sm text-neutral-600 leading-loose mb-8">
+                {product.description.split("\n\n").map((stanza, si) => (
+                  <span key={si} className="block mb-6 last:mb-0">
+                    {stanza.split("\n").map((line, li) => (
+                      <span key={li} className="block">
+                        {line.split(/(?<=、)/).map((seg, j) => (
+                          <span key={j} className="inline-block">
+                            {seg}
+                          </span>
+                        ))}
+                      </span>
+                    ))}
+                  </span>
+                ))}
               </p>
 
               <p className="text-sm tracking-wide mb-8">
@@ -90,6 +107,7 @@ export default async function Shop() {
                   Available Soon
                 </div>
               )}
+              </div>
             </section>
           ))}
         </div>

@@ -20,7 +20,7 @@ export type Product = {
 export const products: Product[] = [
   {
     slug: "fade-stay",
-    title: "fade, stay",
+    title: "Fade, Stay",
     price: 2500,
     paymentLink: null,
     paymentLinkId: null,
@@ -32,8 +32,22 @@ export const products: Product[] = [
       "Saddle-stitched with silver thread",
       "Edition of 50",
     ],
-    description:
-      "消えかけている光と、そこに留まるもの。日常の中で見過ごされていく一瞬を綴じた、初めての写真集。",
+    description: [
+      "家を出て、太陽にあたって、雨に降られて、",
+      "また家に帰ってくる。",
+      "",
+      "その行き来のあいだで、街も同じように動いている。",
+      "今まであったものがなくなっていたり、",
+      "何もなかったところに何かが芽生えたり。",
+      "僕たちが知らないところで、ぶつかったり、寄り添ったり。",
+      "",
+      "いつからか、そんな街を見つめるようになった。",
+      "歩きながら目に映る、動きの断片が愛おしい。",
+      "消えていくものと、そこに残り続けるもの。",
+      "",
+      "僕たちも等しく消えていく。残っていく。",
+      "一緒に時間を過ごしている、その美しい姿を。",
+    ].join("\n"),
     images: [],
   },
 ];
