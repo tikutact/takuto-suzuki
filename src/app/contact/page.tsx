@@ -62,7 +62,7 @@ export default function Contact() {
                 required
                 value={form.name}
                 onChange={handleChange}
-                className="w-full border-b border-neutral-200 py-2 text-sm outline-none focus:border-black transition-colors bg-transparent placeholder:text-neutral-300"
+                className="w-full border-b border-neutral-200 py-2 text-base md:text-sm outline-none focus:border-black transition-colors bg-transparent placeholder:text-neutral-300"
                 placeholder="お名前"
               />
             </div>
@@ -77,7 +77,7 @@ export default function Contact() {
                 required
                 value={form.email}
                 onChange={handleChange}
-                className="w-full border-b border-neutral-200 py-2 text-sm outline-none focus:border-black transition-colors bg-transparent placeholder:text-neutral-300"
+                className="w-full border-b border-neutral-200 py-2 text-base md:text-sm outline-none focus:border-black transition-colors bg-transparent placeholder:text-neutral-300"
                 placeholder="メールアドレス"
               />
             </div>
@@ -92,7 +92,7 @@ export default function Contact() {
                 rows={6}
                 value={form.message}
                 onChange={handleChange}
-                className="w-full border-b border-neutral-200 py-2 text-sm outline-none focus:border-black transition-colors bg-transparent resize-none placeholder:text-neutral-300"
+                className="w-full border-b border-neutral-200 py-2 text-base md:text-sm outline-none focus:border-black transition-colors bg-transparent resize-none placeholder:text-neutral-300"
                 placeholder="メッセージ"
               />
             </div>
