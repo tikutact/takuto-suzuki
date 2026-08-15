@@ -2,10 +2,16 @@
 
 import { useState } from "react";
 import JsonLd from "@/components/JsonLd";
-import { breadcrumb } from "@/lib/structured-data";
+import {
+  breadcrumb,
+  CONTACT_EMAIL,
+  mailtoWithSubject,
+} from "@/lib/structured-data";
 
 export default function Contact() {
-  const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
+    "idle"
+  );
   const [form, setForm] = useState({ name: "", email: "", message: "" });
 
   const handleChange = (
@@ -14,16 +20,20 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // FormData は await をまたぐと currentTarget が null になるので先に作る
+    const data = new FormData(e.currentTarget as HTMLFormElement);
     setStatus("sending");
     try {
       const res = await fetch("https://formspree.io/f/mzdojyor", {
         method: "POST",
-        body: new FormData(e.currentTarget as HTMLFormElement),
+        body: data,
         headers: { Accept: "application/json" },
       });
-      setStatus(res.ok ? "done" : "idle");
+      // 失敗を "idle" に戻すと成功と区別がつかず、送れたつもりで離脱される。
+      // 商品の不良品連絡もこのフォームが窓口なので、必ずエラーを見せる。
+      setStatus(res.ok ? "done" : "error");
     } catch {
-      setStatus("idle");
+      setStatus("error");
     }
   };
 
@@ -39,8 +49,18 @@ export default function Contact() {
         <h1 className="text-xs tracking-[0.4em] uppercase text-neutral-400 mb-4">
           Contact
         </h1>
-        <p className="text-sm text-neutral-500 mb-16 leading-relaxed">
-          撮影依頼・展示のご相談など、お気軽にご連絡ください。
+        <p className="text-sm text-neutral-500 mb-4 leading-relaxed">
+          撮影依頼・展示のご相談、ご購入いただいた商品についてのお問い合わせなど、
+          お気軽にご連絡ください。
+        </p>
+        <p className="text-sm text-neutral-400 mb-16 leading-relaxed">
+          メールでも受け付けています:{" "}
+          <a
+            href={mailtoWithSubject("【takutosuzuki.com】お問い合わせ")}
+            className="underline underline-offset-4 hover:text-black transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>
         </p>
 
         {status === "done" ? (
@@ -96,6 +116,24 @@ export default function Contact() {
                 placeholder="メッセージ"
               />
             </div>
+
+            {status === "error" && (
+              <div className="border border-neutral-300 px-4 py-4">
+                <p className="text-sm text-neutral-700 leading-relaxed">
+                  送信できませんでした。
+                </p>
+                <p className="text-xs text-neutral-500 leading-relaxed mt-2">
+                  お手数ですが、時間をおいて再度お試しいただくか、
+                  <a
+                    href={mailtoWithSubject("【takutosuzuki.com】お問い合わせ")}
+                    className="underline underline-offset-4 hover:text-black transition-colors"
+                  >
+                    {CONTACT_EMAIL}
+                  </a>
+                  宛に直接メールをお送りください。
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"

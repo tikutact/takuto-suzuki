@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { products, SHIPPING_JPY } from "@/lib/shop";
+import { CONTACT_EMAIL, mailtoWithSubject } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "特定商取引法に基づく表記 — TAKUTO SUZUKI",
@@ -16,34 +18,67 @@ const entries: { label: string; value: React.ReactNode }[] = [
   {
     label: "電話番号",
     value:
-      "電話番号はご請求をいただいた場合、遅滞なく開示いたします。お問い合わせフォームよりご請求ください。",
+      "電話番号はご請求をいただいた場合、遅滞なく開示いたします。下記のお問い合わせフォームまたはメールよりご請求ください。",
   },
   {
     label: "お問い合わせ",
     value: (
-      <Link
-        href="/contact"
-        className="underline underline-offset-4 hover:text-black transition-colors"
-      >
-        お問い合わせフォーム
-      </Link>
+      <>
+        <Link
+          href="/contact"
+          className="underline underline-offset-4 hover:text-black transition-colors"
+        >
+          お問い合わせフォーム
+        </Link>
+        <br />
+        またはメール:{" "}
+        <a
+          href={mailtoWithSubject("【Fade, Stay】お問い合わせ")}
+          className="underline underline-offset-4 hover:text-black transition-colors"
+        >
+          {CONTACT_EMAIL}
+        </a>
+      </>
     ),
   },
   { label: "販売価格", value: "各商品ページに表示する価格（消費税込み）" },
   {
     label: "商品代金以外の必要料金",
-    value: "送料（購入手続き画面に表示します）",
+    value: `送料 全国一律 ${SHIPPING_JPY.toLocaleString()}円（消費税込み）。レターパックライトにて発送いたします。`,
+  },
+  { label: "配送地域", value: "日本国内のみ" },
+  {
+    label: "販売数量の制限",
+    // 部数は shop.ts の edition を参照する（手打ちすると必ず乖離するため）
+    value: `『${products[0].title}』はエディション50部のうち、本サイトでの販売は${products[0].edition}部です。残部は店舗での対面販売に充てているため、本サイトでは${products[0].edition}部に達した時点で販売を終了します。`,
   },
   { label: "お支払い方法", value: "クレジットカード決済（Stripe）" },
   { label: "お支払い時期", value: "ご注文時にお支払いが確定します" },
   {
     label: "商品の引き渡し時期",
-    value: "ご注文確認後、5営業日以内に発送いたします",
+    value:
+      "ご注文確認後、5営業日以内に発送いたします（土日祝を除く）",
   },
   {
     label: "返品・交換について",
-    value:
-      "商品の性質上、お客様のご都合による返品・交換はお受けできません。落丁・乱丁・配送中の破損など不良品については、商品到着後7日以内にお問い合わせフォームよりご連絡ください。良品と交換、または在庫がない場合は返金にて対応いたします。",
+    value: (
+      <>
+        商品の性質上、お客様のご都合による返品・交換はお受けできません。
+        <br />
+        <br />
+        落丁・乱丁・配送中の破損など不良品の場合、
+        <strong className="font-normal text-neutral-900">
+          商品のご返送は不要です
+        </strong>
+        。商品到着後7日以内に、状態がわかる写真を添えて、上記のお問い合わせフォームまたはメールにてご連絡ください。良品と交換いたします（在庫がない場合は代金全額を返金いたします）。
+        <br />
+        <br />
+        なお、当方から商品のご返送をお願いする場合、返送にかかる送料は当方が負担いたします。
+        <br />
+        <br />
+        表紙に貼り付けた写真の剥がれ・浮きは、経年での変化を想定した仕様であり不良品には該当しません。
+      </>
+    ),
   },
 ];
 

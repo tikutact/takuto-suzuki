@@ -3,6 +3,16 @@
 
 export const SITE_URL = "https://www.takutosuzuki.com";
 
+/** 公開する連絡先。特商法ページ・お問い合わせページ・JSON-LD で共有する。
+ *  ここを変えたら3箇所すべてに反映されるので、他に直書きしないこと。
+ *  （独自ドメインのアドレスに移す時も、書き換えるのはこの1行だけでよい） */
+export const CONTACT_EMAIL = "tikutact@gmail.com";
+
+/** 件名を添えた mailto リンク。Gmail側でラベルを付けて仕分けられるようにする。 */
+export function mailtoWithSubject(subject: string): string {
+  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}`;
+}
+
 export function jsonLd(data: Record<string, unknown>): string {
   return JSON.stringify(data);
 }
@@ -23,7 +33,7 @@ export function personLd(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     ...person,
-    email: "tikutact@gmail.com",
+    email: CONTACT_EMAIL,
     sameAs: ["https://www.instagram.com/_suzukitakuto_/"],
   };
 }
