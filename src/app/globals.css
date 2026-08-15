@@ -24,10 +24,13 @@ html {
   to   { opacity: 1; }
 }
 
+/* font-family はここで指定しない。layout.tsx の <body> に付けている
+   ebGaramond.className が担当する（クラスの方が特異度が高くここは元から
+   効いていなかった）。CSS変数経由の指定は iOS WebKit で反映されないため、
+   className を直接当てる方式を維持すること。 */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "EB Garamond", Georgia, serif;
   -webkit-font-smoothing: antialiased;
 }
 

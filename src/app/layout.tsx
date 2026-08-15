@@ -1,15 +1,29 @@
 import type { Metadata } from "next";
-import { EB_Garamond } from "next/font/google";
+import localFont from "next/font/local";
 import Nav from "@/components/Nav";
 import PageTransition from "@/components/PageTransition";
 import JsonLd from "@/components/JsonLd";
 import { personLd, webSiteLd } from "@/lib/structured-data";
 import "./globals.css";
 
-const ebGaramond = EB_Garamond({
+// next/font/google はビルドのたびに Google Fonts へ取りに行くため、ビルドが
+// 外部依存になる。実際に lightleak で Vercel のビルドが取得失敗で落ちた
+// （2026-08-12）。厄介なのは、落ちても公開サイトは前のデプロイのまま200を
+// 返すので見た目では気づけないこと。→ woff2 を同梱して外部依存をなくす。
+//
+// 同梱しているのは latin サブセットのみ（ソースに latin-ext の文字が0件
+// であることを確認済み）。アクセント付きラテン・† ・₫ などを使うように
+// なったら latin-ext の woff2 も同梱すること。
+const ebGaramond = localFont({
+  src: "./fonts/EBGaramond-latin.woff2",
   variable: "--font-eb-garamond",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  // 可変フォントで軸は 400–800。font-light(300) は400にクランプされる
+  weight: "400 800",
+  display: "swap",
+  // localFont は書体の分類を知らずフォールバックに Arial（サンセリフ）を当てる。
+  // next/font/google 時代は Times New Roman だったので明示して揃える。
+  // これを外すと読込中に明朝→ゴシックのちらつきが出て、CLSの指標もズレる。
+  adjustFontFallback: "Times New Roman",
 });
 
 export const metadata: Metadata = {
