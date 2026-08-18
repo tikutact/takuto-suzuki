@@ -40,8 +40,21 @@ export type Product = SaleConfig & {
   soldOut: boolean;
   specs: string[];
   description: string;
-  /** public/ 配下のパス。空の間はプレースホルダー表示 */
-  images: string[];
+  /** 1枚目が一覧のヒーロー（B5比率の枠にobject-coverで収まる）。
+   *  2枚目以降は本文の下に原寸比率のまま縦に積む。空の間はプレースホルダー表示 */
+  images: ShopImage[];
+};
+
+/** 写真集は中身が見えないと買う判断がつかないので、表紙の1枚では足りない。
+ *  幅と高さを持たせるのは、読み込み前に縦の場所を確保してガタつきを防ぐため。
+ *  値は実ファイルから測って入れる（`sips -g pixelWidth -g pixelHeight <file>`）。 */
+export type ShopImage = {
+  /** public/ 配下のパス */
+  src: string;
+  width: number;
+  height: number;
+  /** 何が写っているかを書く（装飾的な言い換えではなく内容） */
+  alt: string;
 };
 
 /** 送料（全国一律・税込）。レターパックライトの実額。

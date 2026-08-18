@@ -40,16 +40,15 @@ export default async function Shop() {
 
         <div className="space-y-24">
           {products.map((product, i) => (
-            <section
-              key={product.slug}
-              className="md:grid md:grid-cols-[5fr_6fr] md:gap-12 md:items-start"
-            >
+            <section key={product.slug}>
+            <div className="md:grid md:grid-cols-[5fr_6fr] md:gap-12 md:items-start">
               <div className="relative aspect-[182/257] bg-neutral-100 overflow-hidden mb-8 md:mb-0">
                 {product.images[0] && (
                   <Image
-                    src={product.images[0]}
-                    alt={product.title}
+                    src={product.images[0].src}
+                    alt={product.images[0].alt}
                     fill
+                    priority
                     sizes="(min-width: 768px) 400px, 100vw"
                     className="object-cover"
                   />
@@ -112,6 +111,24 @@ export default async function Shop() {
                 </div>
               )}
               </div>
+            </div>
+
+            {/* 2枚目以降。表紙だけでは中身が分からないので、見開き・綴じ・厚みを原寸比率のまま見せる */}
+            {product.images.length > 1 && (
+              <div className="mt-12 md:mt-16 space-y-6 md:space-y-8">
+                {product.images.slice(1).map((image) => (
+                  <Image
+                    key={image.src}
+                    src={image.src}
+                    alt={image.alt}
+                    width={image.width}
+                    height={image.height}
+                    sizes="(min-width: 896px) 896px, 100vw"
+                    className="w-full h-auto"
+                  />
+                ))}
+              </div>
+            )}
             </section>
           ))}
         </div>
