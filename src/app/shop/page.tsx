@@ -38,11 +38,16 @@ export default async function Shop() {
           Shop
         </h1>
 
+        {/* モバイルは1カラムに潰れるので、写真がPurchaseボタンより後ろに回ると
+            誰も辿り着かない。並び順を 表紙 → 中の写真 → 文章・価格 に固定する。
+            デスクトップは col-start / row-start で明示配置して従来のままにする。 */}
         <div className="space-y-24">
           {products.map((product, i) => (
-            <section key={product.slug}>
-            <div className="md:grid md:grid-cols-[5fr_6fr] md:gap-12 md:items-start">
-              <div className="relative aspect-[182/257] bg-neutral-100 overflow-hidden mb-8 md:mb-0">
+            <section
+              key={product.slug}
+              className="flex flex-col md:grid md:grid-cols-[5fr_6fr] md:gap-x-12 md:items-start"
+            >
+              <div className="order-1 md:order-none md:col-start-1 md:row-start-1 relative aspect-[182/257] bg-neutral-100 overflow-hidden mb-8 md:mb-0">
                 {product.images[0] && (
                   <Image
                     src={product.images[0].src}
@@ -55,7 +60,24 @@ export default async function Shop() {
                 )}
               </div>
 
-              <div>
+              {/* 2枚目以降。表紙だけでは中身が分からないので、見開き・綴じ・厚みを原寸比率のまま見せる */}
+              {product.images.length > 1 && (
+                <div className="order-2 md:order-none md:col-start-1 md:col-span-2 md:row-start-2 md:mt-16 space-y-6 md:space-y-8 mb-12 md:mb-0">
+                  {product.images.slice(1).map((image) => (
+                    <Image
+                      key={image.src}
+                      src={image.src}
+                      alt={image.alt}
+                      width={image.width}
+                      height={image.height}
+                      sizes="(min-width: 896px) 896px, 100vw"
+                      className="w-full h-auto"
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className="order-3 md:order-none md:col-start-2 md:row-start-1">
               <h2 className="text-lg tracking-wide mb-4">{product.title}</h2>
 
               <ul className="space-y-1 mb-6">
@@ -111,24 +133,6 @@ export default async function Shop() {
                 </div>
               )}
               </div>
-            </div>
-
-            {/* 2枚目以降。表紙だけでは中身が分からないので、見開き・綴じ・厚みを原寸比率のまま見せる */}
-            {product.images.length > 1 && (
-              <div className="mt-12 md:mt-16 space-y-6 md:space-y-8">
-                {product.images.slice(1).map((image) => (
-                  <Image
-                    key={image.src}
-                    src={image.src}
-                    alt={image.alt}
-                    width={image.width}
-                    height={image.height}
-                    sizes="(min-width: 896px) 896px, 100vw"
-                    className="w-full h-auto"
-                  />
-                ))}
-              </div>
-            )}
             </section>
           ))}
         </div>
