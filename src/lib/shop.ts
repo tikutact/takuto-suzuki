@@ -36,6 +36,16 @@ export type Product = SaleConfig & {
    *  返品1件につき上限を +1 する必要がある。
    *  上記3点は `node scripts/check-payment-link.mjs` で機械判定できる。 */
   edition: number;
+  /** 返品・返金した件数。
+   *
+   *  返金してもStripeの完了セッションは戻らないので、返品が出ると
+   *  「売れた数」が実売より多いまま固定される。その差をここで吸収する
+   *  （販売を止める閾値 = edition + refunded。`salesCap()` を使うこと）。
+   *
+   *  **edition を +1 して代用してはいけない。** edition は購入者への約束で、
+   *  特定商取引法のページに「本サイトでの販売は◯部」として表示されるため、
+   *  返品のたびに法定表示の部数が勝手に増えることになる。 */
+  refunded: number;
   /** 手動の売り切れフラグ（自動判定と併用・どちらかが真ならSold Out） */
   soldOut: boolean;
   specs: string[];
@@ -61,6 +71,12 @@ export type ShopImage = {
  *  変更時は Stripe の配送料レートも作り直すこと（サイト表示とStripeの二重管理）。 */
 export const SHIPPING_JPY = 430;
 
+/** 販売を止める閾値。返金分は完了セッションから戻らないので、その件数だけ広げる。
+ *  edition は購入者への約束なので動かさない（[[特商法ページ]]がこの値を表示している）。 */
+export function salesCap(product: Product): number {
+  return product.edition + product.refunded;
+}
+
 export const products: Product[] = [
   {
     slug: "fade-stay",
@@ -69,6 +85,7 @@ export const products: Product[] = [
     paymentLink: null,
     paymentLinkId: null,
     edition: 30,
+    refunded: 0,
     soldOut: false,
     specs: [
       "Photo zine",

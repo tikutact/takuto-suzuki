@@ -2,181 +2,142 @@
 /**
  * Payment Link を作る（商品・価格・配送料レートごと）。
  *
- *   STRIPE_SECRET_KEY=sk_live_... node scripts/create-payment-link.mjs
- *   node scripts/create-payment-link.mjs --test   # .env.local のテストキーで練習
+ *   node scripts/create-payment-link.mjs --live   # 本番に作る
+ *   node scripts/create-payment-link.mjs          # テストモードで練習
  *
- * 設定値は shop.ts（price / edition / SHIPPING_JPY）から読むので手打ちしない。
- * 作ったあとは必ず `node scripts/check-payment-link.mjs <plink_...>` で機械判定する。
+ * 鍵は --live なら .env.local の STRIPE_SECRET_KEY_LIVE、既定は STRIPE_SECRET_KEY。
+ * **コマンドラインに sk_live_ を書かないこと**（シェル履歴に平文で残る）。
+ * 設定値は shop.ts（price / edition / refunded / SHIPPING_JPY）から読むので手打ちしない。
+ * 作ったあとは必ず `node scripts/check-payment-link.mjs --live <plink_...>` を通す。
  *
  * なぜスクリプトにするか: 売価を変えるとPayment Linkは作り直しになる（既存リンクの
  * 金額は変えられない）。そのたびにダッシュボードで10項目を手で設定し直すのは
  * 設定漏れの温床で、実際に「送料レートなし＝送料0円で売れる」を一度踏んでいる。
  *
- * 冪等キーを固定してあるので、同じ設定で二重に走らせても増えない。
- * 設定を変えて作り直すときは IDEMPOTENCY_TAG を上げること。
+ * **冪等キーはStripe側で24時間で失効する。** 「二度と増えない」保証ではないので、
+ * 実行前に同じ商品の有効なリンクが既にないかを必ず確認する（下の重複チェック）。
+ * 意図的に作り直すときだけ --force を付ける。
  */
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { loadKey, loadProduct, salesCap, parseArgs } from "./_shop-config.mjs";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-
-/** 設定を変えて作り直すときはここを v2, v3... と上げる */
+/** 設定を変えて作り直すときは v2, v3... と上げる */
 const IDEMPOTENCY_TAG = "fade-stay-v1";
 
-const useTest = process.argv.includes("--test");
-
-function loadKey() {
-  if (process.env.STRIPE_SECRET_KEY) return process.env.STRIPE_SECRET_KEY;
-  try {
-    const raw = readFileSync(join(root, ".env.local"), "utf8");
-    const m = raw.match(/^STRIPE_SECRET_KEY=(.+)$/m);
-    if (m) return m[1].trim();
-  } catch {}
-  return null;
-}
-
-function loadShop() {
-  const src = readFileSync(join(root, "src/lib/shop.ts"), "utf8");
-  const pick = (re) => {
-    const m = src.match(re);
-    return m ? m[1] : null;
-  };
-  return {
-    title: pick(/^\s*title:\s*"([^"]+)"/m),
-    price: Number(pick(/^\s*price:\s*(\d+),/m)),
-    edition: Number(pick(/^\s*edition:\s*(\d+),/m)),
-    shipping: Number(pick(/SHIPPING_JPY\s*=\s*(\d+)/)),
-  };
-}
-
-const key = loadKey();
-if (!key) {
-  console.error("STRIPE_SECRET_KEY が見つかりません（環境変数か .env.local）");
-  process.exit(2);
-}
-const isLive = key.startsWith("sk_live_") || key.startsWith("rk_live_");
-if (!useTest && !isLive) {
-  console.error(
-    "テストキーです。本番リンクを作るなら sk_live_ を渡してください。\n" +
-      "テストで練習するなら --test を付けてください。"
-  );
-  process.exit(2);
-}
-
-const shop = loadShop();
-for (const [k, v] of Object.entries(shop)) {
-  if (!v) {
-    console.error(`shop.ts から ${k} を読めませんでした`);
-    process.exit(2);
-  }
-}
-
-async function stripe(path, params, idempotencyKey) {
-  const body = new URLSearchParams(params);
+async function stripe(key, path, params, idempotencyKey) {
   const res = await fetch(`https://api.stripe.com/v1/${path}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/x-www-form-urlencoded",
-      ...(idempotencyKey
-        ? { "Idempotency-Key": `${IDEMPOTENCY_TAG}-${idempotencyKey}` }
-        : {}),
+      ...(idempotencyKey ? { "Idempotency-Key": `${IDEMPOTENCY_TAG}-${idempotencyKey}` } : {}),
     },
-    body,
+    body: new URLSearchParams(params),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(`${path}: ${res.status} ${json.error?.message ?? ""}`);
+  if (!res.ok) throw new Error(`${path}: HTTP ${res.status} ${json.error?.message ?? ""}`);
   return json;
 }
 
-console.log(
-  `\nモード: ${isLive ? "本番(live)" : "テスト(test)"}\n` +
-    `売価 ¥${shop.price} / 送料 ¥${shop.shipping} / オンライン枠 ${shop.edition}部\n`
-);
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const { key, isLive } = loadKey({ live: args.live });
+  const shop = loadProduct(args.slug);
+  if (shop.price === null) throw new Error("shop.ts の price が null です。先に売価を決めてください。");
 
-// --- 1. 商品 ---
-const product = await stripe(
-  "products",
-  {
+  const cap = salesCap(shop);
+  console.log(
+    `\nモード: ${isLive ? "本番(live)" : "テスト(test)"}\n` +
+      `商品: ${shop.title}（${shop.slug}）\n` +
+      `売価 ¥${shop.price} / 送料 ¥${shop.shipping} / 販売枠 ${cap}（edition ${shop.edition} + 返品 ${shop.refunded}）\n`
+  );
+
+  // --- 0. 重複チェック ---
+  // 冪等キーは24時間で失効するので、後日の再実行は「もう1本の有効なリンク」を生む。
+  // 古いリンクが生きたまま新しいリンクを貼ると、上限30の枠が2本ぶん（実質60）になる。
+  const existing = await fetch(
+    `https://api.stripe.com/v1/payment_links?active=true&limit=100`,
+    { headers: { Authorization: `Bearer ${key}` } }
+  ).then((r) => r.json());
+  const dup = (existing.data ?? []).filter((l) => l.metadata?.slug === shop.slug);
+  if (dup.length && !args.force) {
+    console.error(
+      `この商品の有効なPayment Linkが既に ${dup.length} 本あります:\n` +
+        dup.map((l) => `  ${l.id}  ${l.url}`).join("\n") +
+        `\n\n作り直すなら、先に古い方を無効化してから --force を付けてください。` +
+        `\n（有効なリンクが2本あると、それぞれが独立に販売枠を持つので売り越します）\n`
+    );
+    process.exit(2);
+  }
+
+  const product = await stripe(key, "products", {
     name: shop.title,
     description: "写真集 / Photo zine, B5, 32 pages, edition of 50",
     shippable: "true",
-    "metadata[slug]": "fade-stay",
-  },
-  "product"
-);
-console.log(`✓ 商品        ${product.id}  ${product.name}`);
+    "metadata[slug]": shop.slug,
+  }, "product");
+  console.log(`✓ 商品        ${product.id}  ${product.name}`);
 
-// --- 2. 価格（税込・JPYは最小単位＝円） ---
-const price = await stripe(
-  "prices",
-  {
+  const price = await stripe(key, "prices", {
     product: product.id,
     currency: "jpy",
     unit_amount: String(shop.price),
     tax_behavior: "inclusive",
-  },
-  "price"
-);
-console.log(`✓ 価格        ${price.id}  ¥${price.unit_amount}`);
+  }, "price");
+  console.log(`✓ 価格        ${price.id}  ¥${price.unit_amount}`);
 
-// --- 3. 配送料レート（レターパックライト・全国一律） ---
-const rate = await stripe(
-  "shipping_rates",
-  {
+  const rate = await stripe(key, "shipping_rates", {
     display_name: "レターパックライト（全国一律）",
     type: "fixed_amount",
     "fixed_amount[amount]": String(shop.shipping),
     "fixed_amount[currency]": "jpy",
     tax_behavior: "inclusive",
-  },
-  "shipping_rate"
-);
-console.log(`✓ 配送料      ${rate.id}  ¥${rate.fixed_amount.amount}`);
+  }, "shipping_rate");
+  console.log(`✓ 配送料      ${rate.id}  ¥${rate.fixed_amount.amount}`);
 
-// --- 4. Payment Link ---
-// 数量は1固定（adjustable_quantity を開けると支払い回数上限が冊数を守れなくなる）。
-// restrictions で上限＝オンライン枠。上限到達でリンクは自動的に active:false になる。
-const linkParams = {
-  "line_items[0][price]": price.id,
-  "line_items[0][quantity]": "1",
-  "restrictions[completed_sessions][limit]": String(shop.edition),
-  "shipping_address_collection[allowed_countries][0]": "JP",
-  "shipping_options[0][shipping_rate]": rate.id,
-  "automatic_tax[enabled]": "false",
-  inactive_message:
-    "完売しました。お求めいただきありがとうございました。",
-  "after_completion[type]": "hosted_confirmation",
-  "after_completion[hosted_confirmation][custom_message]":
-    "ご注文ありがとうございます。ご注文確認後、5営業日以内に発送します。",
-  "metadata[slug]": "fade-stay",
-};
+  // 数量は1固定（adjustable_quantity を開けると支払い回数上限が冊数を守れなくなる）。
+  // コンビニ払い・銀行振込は使わない（complete でも未入金のまま販売枠を消費する）。
+  const linkParams = {
+    "line_items[0][price]": price.id,
+    "line_items[0][quantity]": "1",
+    "restrictions[completed_sessions][limit]": String(cap),
+    "shipping_address_collection[allowed_countries][0]": "JP",
+    "shipping_options[0][shipping_rate]": rate.id,
+    "automatic_tax[enabled]": "false",
+    inactive_message: "完売しました。お求めいただきありがとうございました。",
+    "after_completion[type]": "hosted_confirmation",
+    "after_completion[hosted_confirmation][custom_message]":
+      "ご注文ありがとうございます。ご注文確認後、5営業日以内に発送します。",
+    "metadata[slug]": shop.slug,
+  };
 
-// コンビニ払い・銀行振込は使わない前提（後払い系は payment_status=unpaid で
-// 完了扱いになり、販売数の集計と支払い回数上限の両方が狂う）。明示して固定する。
-async function createLink(methods) {
-  const params = { ...linkParams };
-  methods.forEach((m, i) => {
-    params[`payment_method_types[${i}]`] = m;
-  });
-  return stripe("payment_links", params, `link-${methods.join("-")}`);
+  const createLink = (methods) => {
+    const params = { ...linkParams };
+    methods.forEach((m, i) => { params[`payment_method_types[${i}]`] = m; });
+    return stripe(key, "payment_links", params, `link-${methods.join("-")}`);
+  };
+
+  let link;
+  try {
+    link = await createLink(["card", "link"]);
+  } catch (e) {
+    console.log(`  （card+link は不可: ${e.message} → card のみで作成）`);
+    link = await createLink(["card"]);
+  }
+
+  console.log(`✓ Payment Link ${link.id}`);
+  console.log(`\nURL: ${link.url}\n`);
+  console.log("shop.ts に入れる値（**必ず両方セットで貼る**。片方だけだと検査を通っても壊れる）:");
+  console.log(`  paymentLink: ${JSON.stringify(link.url)},`);
+  console.log(`  paymentLinkId: ${JSON.stringify(link.id)},`);
+  console.log(
+    `\n次: node scripts/check-payment-link.mjs ${isLive ? "--live " : ""}${link.id}\n`
+  );
 }
 
-let link;
-try {
-  link = await createLink(["card", "link"]);
-} catch (e) {
-  console.log(`  （card+link は不可: ${e.message} → card のみで作成）`);
-  link = await createLink(["card"]);
-}
-
-console.log(`✓ Payment Link ${link.id}`);
-console.log(`\nURL: ${link.url}\n`);
-console.log("shop.ts に入れる値:");
-console.log(`  paymentLink: ${JSON.stringify(link.url)},`);
-console.log(`  paymentLinkId: ${JSON.stringify(link.id)},`);
-console.log(
-  `\n次: node scripts/check-payment-link.mjs ${link.id}  で設定を機械判定する\n`
-);
+main().catch((e) => {
+  console.error(`\n失敗しました: ${e.message}`);
+  console.error("途中まで作られたオブジェクトがStripeに残っている可能性があります。");
+  console.error("ダッシュボードで確認し、不要なものは無効化してから再実行してください。\n");
+  process.exit(2);
+});

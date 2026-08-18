@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumb } from "@/lib/structured-data";
-import { products, SHIPPING_JPY } from "@/lib/shop";
+import { products, salesCap, SHIPPING_JPY } from "@/lib/shop";
 import { getSoldCount } from "@/lib/stripe";
 
 // Stripeの販売数を定期的に取り直して自動Sold Out判定する
@@ -21,7 +21,7 @@ export default async function Shop() {
       if (product.soldOut) return true;
       if (!product.paymentLinkId) return false;
       const sold = await getSoldCount(product.paymentLinkId);
-      return sold !== null && sold >= product.edition;
+      return sold !== null && sold >= salesCap(product);
     })
   );
 

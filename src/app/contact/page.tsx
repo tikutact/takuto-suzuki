@@ -22,6 +22,10 @@ export default function Contact() {
     e.preventDefault();
     // FormData は await をまたぐと currentTarget が null になるので先に作る
     const data = new FormData(e.currentTarget as HTMLFormElement);
+    // Formspree の _subject。付けないと既定の件名で届き、Gmail側の
+    // 「【takutosuzuki.com】」フィルタに掛からず3事業のメールに埋もれる。
+    // 不良品の連絡もこのフォームが窓口なので、埋もれると法定の対応期限を落とす。
+    data.append("_subject", "【takutosuzuki.com】お問い合わせ");
     setStatus("sending");
     try {
       const res = await fetch("https://formspree.io/f/mzdojyor", {
