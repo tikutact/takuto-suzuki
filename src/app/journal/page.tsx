@@ -5,10 +5,14 @@ import { getAllPosts } from "@/lib/journal";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumb } from "@/lib/structured-data";
 
+// Journal は運用しない方針にした（2026-08-19）。ナビとサイトマップから外し、
+// 中身が「Coming soon」だけのページが検索結果に出ないよう noindex にしてある。
+// ルート自体は残してあるので、方針が変われば noindex を外して戻せる。
 export const metadata: Metadata = {
   title: "Journal — Takuto Suzuki",
   description:
     "旅と制作のフィールドノート。Takuto Suzuki が歩いた場所と、そこで見たものの記録。",
+  robots: { index: false, follow: false },
 };
 
 export default function Journal() {

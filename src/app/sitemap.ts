@@ -11,7 +11,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/works/ordinary",
     "/works/nape",
     "/film",
-    "/journal",
     "/shop",
     "/biography",
     "/contact",
