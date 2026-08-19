@@ -12,11 +12,10 @@ const links = [
   { href: "/contact", label: "Contact" },
 ];
 
-const series = [
-  { slug: "cast", title: "cast" },
-  { slug: "trace", title: "trace" },
-  { slug: "ordinary", title: "ordinary" },
-];
+// Works の下に出る子項目。年でまとめる方針にしたので年を並べる
+// （2026-08-19にシリーズ名 cast/trace/ordinary を廃止）。
+// 年を増やすときはここと sitemap.ts の両方に足す。
+const series = [{ slug: "2026", title: "2026" }];
 
 export default function Nav() {
   const pathname = usePathname();

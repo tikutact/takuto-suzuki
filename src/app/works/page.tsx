@@ -5,22 +5,11 @@ import { breadcrumb } from "@/lib/structured-data";
 
 const series = [
   {
-    slug: "cast",
-    title: "cast",
-    year: "2026",
+    slug: "2026",
+    title: "2026",
+    // 年の下に出るのは年ではなく点数。年を二度書いても情報が増えない
+    sub: "21 photographs",
     cover: "/images/cast-02.jpg",
-  },
-  {
-    slug: "trace",
-    title: "trace",
-    year: "2026",
-    cover: "/images/trace-11.jpg",
-  },
-  {
-    slug: "ordinary",
-    title: "ordinary",
-    year: "2026",
-    cover: "/images/ordinary-09.jpg",
   },
 ];
 
@@ -34,7 +23,7 @@ export default function Works() {
         ])}
       />
       <div className="space-y-16">
-        {series.map(({ slug, title, year, cover }) => (
+        {series.map(({ slug, title, sub, cover }) => (
           <Link key={slug} href={`/works/${slug}`} className="group block px-4 md:pl-0 md:pr-8">
             <div className="relative w-[90%] aspect-[3/2] overflow-hidden bg-neutral-100">
               {cover && (
@@ -49,7 +38,7 @@ export default function Works() {
             </div>
             <div className="px-6 mt-4 space-y-1">
               <p className="text-lg font-light">{title}</p>
-              <p className="text-xs text-neutral-400">{year}</p>
+              <p className="text-xs text-neutral-400">{sub}</p>
             </div>
           </Link>
         ))}

@@ -11,6 +11,15 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // 2026-08-19: シリーズ名（cast/trace/ordinary）をやめて年でまとめた。
+  // 3つとも公開済みでサイトマップにも載っていたURLなので、消さずに転送する。
+  async redirects() {
+    return ["cast", "trace", "ordinary"].map((slug) => ({
+      source: `/works/${slug}`,
+      destination: "/works/2026",
+      permanent: true,
+    }));
+  },
   async headers() {
     return [
       {
