@@ -9,7 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/works/cast",
     "/works/trace",
     "/works/ordinary",
-    "/works/nape",
     "/film",
     "/shop",
     "/biography",
