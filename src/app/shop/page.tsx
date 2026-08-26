@@ -38,46 +38,34 @@ export default async function Shop() {
           Shop
         </h1>
 
-        {/* モバイルは1カラムに潰れるので、写真がPurchaseボタンより後ろに回ると
-            誰も辿り着かない。並び順を 表紙 → 中の写真 → 文章・価格 に固定する。
-            デスクトップは col-start / row-start で明示配置して従来のままにする。 */}
+        {/* 並び順は 表紙 → 説明・価格 → 中の写真 でモバイルもデスクトップも揃える。
+            **JSXの順番そのものをこの順にしてある**。CSSの order で見た目だけ
+            入れ替えると、スクリーンリーダーはDOM順に読むので「表紙のあと
+            見開き5枚の説明を全部聞かされてから値段とPurchaseに着く」ことになる。
+            2カラムに割るのは xl（1280px）から。左ナビが md:pl-[40vw] で40vw固定のため、
+            768〜1279px で2カラムにすると表紙が166〜236pxまで潰れる（実測）。
+            1カラム側では表紙を max-w-[420px] で止める（1024px前後で566pxまで肥大するため）。 */}
         <div className="space-y-24">
           {products.map((product, i) => (
             <section
               key={product.slug}
-              className="flex flex-col md:grid md:grid-cols-[5fr_6fr] md:gap-x-12 md:items-start"
+              className="flex flex-col xl:grid xl:grid-cols-[5fr_6fr] xl:gap-x-12 xl:items-start"
             >
-              <div className="order-1 md:order-none md:col-start-1 md:row-start-1 relative aspect-[182/257] bg-neutral-100 overflow-hidden mb-8 md:mb-0">
+              <div className="xl:col-start-1 xl:row-start-1 relative w-full max-w-[420px] xl:max-w-none aspect-[182/257] bg-neutral-100 overflow-hidden mb-8 xl:mb-0">
                 {product.images[0] && (
                   <Image
                     src={product.images[0].src}
                     alt={product.images[0].alt}
                     fill
                     priority
-                    sizes="(min-width: 768px) 400px, 100vw"
+                    sizes="(min-width: 1280px) calc((min(896px, 60vw) - 96px) * 5 / 11), (min-width: 768px) min(420px, calc(min(896px, 60vw) - 48px)), min(420px, calc(100vw - 48px))"
+                    quality={90}
                     className="object-cover"
                   />
                 )}
               </div>
 
-              {/* 2枚目以降。表紙だけでは中身が分からないので、見開き・綴じ・厚みを原寸比率のまま見せる */}
-              {product.images.length > 1 && (
-                <div className="order-2 md:order-none md:col-start-1 md:col-span-2 md:row-start-2 md:mt-16 space-y-6 md:space-y-8 mb-12 md:mb-0">
-                  {product.images.slice(1).map((image) => (
-                    <Image
-                      key={image.src}
-                      src={image.src}
-                      alt={image.alt}
-                      width={image.width}
-                      height={image.height}
-                      sizes="(min-width: 896px) 896px, 100vw"
-                      className="w-full h-auto"
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className="order-3 md:order-none md:col-start-2 md:row-start-1">
+              <div className="xl:col-start-2 xl:row-start-1">
               <h2 className="text-lg tracking-wide mb-4">{product.title}</h2>
 
               <ul className="space-y-1 mb-6">
@@ -133,6 +121,28 @@ export default async function Shop() {
                 </div>
               )}
               </div>
+
+              {/* 2枚目以降。表紙だけでは中身が分からないので、見開き・綴じ・厚みを原寸比率のまま見せる。
+                  sizes は「ナビが左40vwを占め、本体は max-w-4xl から px-6 を引いた幅」という
+                  実測どおりの式にしてある。ここを 896px と書くと 768px幅の端末で
+                  表示413pxの枠に w=1920 を取りに行く（実測）。
+                  見開きは1カラム/2カラムどちらでも本文幅いっぱいなので xl 分岐は不要 */}
+              {product.images.length > 1 && (
+                <div className="xl:col-start-1 xl:col-span-2 xl:row-start-2 mt-12 xl:mt-16 space-y-6 xl:space-y-8">
+                  {product.images.slice(1).map((image) => (
+                    <Image
+                      key={image.src}
+                      src={image.src}
+                      alt={image.alt}
+                      width={image.width}
+                      height={image.height}
+                      sizes="(min-width: 768px) calc(min(896px, 60vw) - 48px), calc(100vw - 48px)"
+                      quality={90}
+                      className="w-full h-auto"
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           ))}
         </div>

@@ -109,7 +109,44 @@ export const products: Product[] = [
       "僕たちも等しく消えていく。残っていく。",
       "一緒に時間を過ごしている、その美しい姿を。",
     ].join("\n"),
-    images: [],
+    images: [
+      {
+        src: "/images/shop/cover.jpg",
+        width: 1800,
+        height: 2400,
+        alt: "コンクリートの壁に置かれた Fade, Stay の表紙。白い表紙の中央に写真が1枚貼られている",
+      },
+      {
+        src: "/images/shop/spread-01.jpg",
+        width: 1800,
+        height: 2400,
+        alt: "見開きいっぱいに広がる、ブラインドと小さな葉の写真",
+      },
+      {
+        src: "/images/shop/spread-02.jpg",
+        width: 1800,
+        height: 2400,
+        alt: "壁に落ちた木の影と、自分の影が写り込んだ写真の見開き",
+      },
+      {
+        src: "/images/shop/spread-03.jpg",
+        width: 1800,
+        height: 2400,
+        alt: "窓辺の手と、白い花の茂みの写真が向かい合う見開き",
+      },
+      {
+        src: "/images/shop/spread-04.jpg",
+        width: 1800,
+        height: 2400,
+        alt: "室内のテーブルと、逆光のボトルの写真が向かい合う見開き",
+      },
+      {
+        src: "/images/shop/statement-card.jpg",
+        width: 1800,
+        height: 2400,
+        alt: "本に添えられた、ステートメントを印刷したカード",
+      },
+    ],
   },
 ];
 
