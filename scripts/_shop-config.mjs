@@ -77,24 +77,59 @@ export function loadProduct(slug) {
     title: str(block, /^\s*title:\s*"([^"]+)"/m, "title"),
     price: numOrNull(block, /^\s*price:\s*(\d+|null),/m, "price"),
     edition: num(block, /^\s*edition:\s*(\d+),/m, "edition"),
-    refunded: num(block, /^\s*refunded:\s*(\d+),/m, "refunded"),
+    restocked: num(block, /^\s*restocked:\s*(\d+),/m, "restocked"),
+    // totalEdition は `FADE_STAY_EDITION` のような定数名で書かれていることがあるので、
+    // 数字ならそのまま、識別子ならファイル内の `const NAME = 数字` を引いて解決する
+    totalEdition: numOrConst(block, src, /^\s*totalEdition:\s*([A-Za-z_$][\w$]*|\d+),/m, "totalEdition"),
+    // 他のフィールドと同じく「読めなければ落とす」。.test() だけで済ませると
+    // カンマ抜き等で読めなかったときに false（＝売り切れていない）を返してしまい、
+    // check-payment-link.mjs の soldOut 整合チェックが黙って ✓ を出す。
+    soldOut: bool(block, /^\s*soldOut:\s*(true|false)\s*,/m, "soldOut"),
     paymentLink: strOrNull(block, /^\s*paymentLink:\s*("([^"]*)"|null),/m),
     paymentLinkId: strOrNull(block, /^\s*paymentLinkId:\s*("([^"]*)"|null),/m),
-    // 送料は商品ごとではなくファイル全体の定数
-    shipping: num(src, /SHIPPING_JPY\s*=\s*(\d+)/, "SHIPPING_JPY"),
+    // 送料・発送日数・配送方法は商品ごとではなくファイル全体の定数。
+    // ここを読まずにスクリプト側へ数字を直書きすると、Stripeの決済完了画面だけ
+    // 古い約束を出し続ける（サイト2ページは定数から自動追従するので気づけない）。
+    shipping: num(src, /^export const SHIPPING_JPY\s*=\s*(\d+)/m, "SHIPPING_JPY"),
+    shippingDays: num(src, /^export const SHIPPING_DAYS\s*=\s*(\d+)/m, "SHIPPING_DAYS"),
+    shippingMethod: str(src, /^export const SHIPPING_METHOD\s*=\s*"([^"]+)"/m, "SHIPPING_METHOD"),
   };
 }
 
-/** 販売を止める閾値。返品が出ると完了セッションは戻らないので、その分だけ上限を広げる。
+/** 販売を止める閾値。戻ってきて再販できる分は完了セッションから引かれないので、
+ *  その冊数だけ上限を広げる（restocked は「返金した件数」ではない。shop.ts の定義を読むこと）。
  *  edition（＝購入者への約束・特商法ページの表示）は動かさない。 */
 export function salesCap(product) {
-  return product.edition + product.refunded;
+  return product.edition + product.restocked;
 }
 
 function str(src, re, name) {
   const m = src.match(re);
   if (!m) throw new Error(`shop.ts から ${name} を読めませんでした`);
   return m[1];
+}
+
+/** `totalEdition: 50,` も `totalEdition: FADE_STAY_EDITION,` も読めるようにする。
+ *  識別子だった場合は同じファイルの `const 識別子 = 数字` を引く。
+ *  どちらでも解決できなければ黙って通さず落とす（黙って違う数字を使う方が危ない）。 */
+function numOrConst(block, src, re, name) {
+  const m = block.match(re);
+  if (!m) throw new Error(`shop.ts から ${name} を読めませんでした`);
+  const raw = m[1];
+  if (/^\d+$/.test(raw)) return Number(raw);
+  const c = src.match(new RegExp(`^\\s*(?:export\\s+)?const ${raw}\\s*=\\s*(\\d+)\\s*;`, "m"));
+  if (!c) {
+    throw new Error(
+      `shop.ts の ${name} が定数 ${raw} を指していますが、その定義（const ${raw} = 数字;）が見つかりません`
+    );
+  }
+  return Number(c[1]);
+}
+
+function bool(src, re, name) {
+  const m = src.match(re);
+  if (!m) throw new Error(`shop.ts から ${name} を読めませんでした`);
+  return m[1] === "true";
 }
 
 function num(src, re, name) {

@@ -41,21 +41,34 @@ export async function getSoldCount(
       }
     );
     if (!res.ok) {
+      // status だけだと「テストキーで本番リンクを引いた」「plink_ の打ち間違い」
+      // 「リンクを消した」がどれも 400 で見分けられない。Stripeは本文に
+      // "No such payment link: '...'" のように理由を書いてくるので必ず一緒に出す。
+      let detail = "";
+      try {
+        const body = (await res.json()) as { error?: { message?: string; code?: string } };
+        detail = [body.error?.code, body.error?.message].filter(Boolean).join(" / ");
+      } catch {
+        detail = "(エラー本文を読めませんでした)";
+      }
       console.error(
-        `[shop] Stripe API が ${res.status} を返しました（${paymentLinkId}）。自動Sold Out判定を行いません。`
+        `[shop] Stripe API が ${res.status} を返しました（${paymentLinkId}）: ${detail}` +
+          ` — 自動Sold Out判定を行いません。`
       );
       return null;
     }
     const json: { data: CheckoutSession[]; has_more?: boolean } =
       await res.json();
 
-    // 100件を超えると古い分を数え落として過少カウント＝売り越しになる。
-    // ページネーション未対応なので、その場合は数えずに諦める（安全側）。
+    // 100件を超えたら数え落としが出る。ここで null を返すと「売り切れていない」
+    // 扱いになり、以後この商品は何冊売れても永久にSold Outにならない＝逆に危ない。
+    // 販売枠は shop.ts の assertProducts で100未満を強制しているので、
+    // 完了セッションが100件を超えている時点で枠は確実に埋まっている。売り止める。
     if (json.has_more) {
       console.error(
-        "[shop] 完了セッションが100件を超えました。過少カウントを避けるため判定を中止します。"
+        "[shop] 完了セッションが100件を超えました。枠（<100）は確実に超えているのでSold Outにします。"
       );
-      return null;
+      return Number.MAX_SAFE_INTEGER;
     }
 
     return json.data

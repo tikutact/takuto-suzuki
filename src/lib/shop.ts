@@ -27,29 +27,47 @@ export type Product = SaleConfig & {
    *（作品の総エディション数はspecsの表記。店頭販売分はここに含めない。
    *  Payment Linkの支払い回数上限もこの数に合わせる）
    *
-   *  枠を動かすとき・返品で1冊戻ってきたときの手順（すべて実測で確認済み）:
-   *   1. ここの edition を変える
-   *   2. Stripe の支払い回数上限を同じ数にする
+   *  手順（すべて実測で確認済み）:
+   *   1. 枠そのものを増減するなら ここの edition を変える。
+   *      **再販できる本が戻ってきただけなら edition は動かさず `restocked` を +1**
+   *      （edition は法定表示に出る購入者への約束なので、1件ごとに勝手に増やさない）
+   *   2. Stripe の支払い回数上限を `salesCap()` の値（edition + restocked）にする
    *   3. **リンクを明示的に再度有効化する**（上限を上げるだけでは active:false のまま）
-   *  URLは変わらないので、コードの再デプロイは要らない。
+   *   4. **デプロイする**。手順1はコードなので、push しないとサイトの枠は増えない
+   *      （Stripeだけ31にすると、サイトは Sold Out のまま販売を再開できない。
+   *       /tokushoho は完全静的なので法定表示の部数も古いままになる）。
+   *  URL自体は変わらないので `paymentLink` の書き換えだけは不要。
    *  なお返金してもStripeの完了セッション数は戻らないので、
-   *  返品1件につき上限を +1 する必要がある。
-   *  上記3点は `node scripts/check-payment-link.mjs` で機械判定できる。 */
+   *  再販できる1冊につき上限を +1 する必要がある（`restocked` を使う）。
+   *  1〜3 は `node scripts/check-payment-link.mjs` で機械判定できる。
+   *  **4 は判定できない**（チェッカーはローカルの shop.ts を読むので、
+   *  push 済みかどうかは原理的に見えない。合格しても本番が古いことがある）。 */
   edition: number;
   /** 作品の総エディション数（店頭販売分を含む）。
    *  specs の "Edition of ◯" と特商法ページの「エディション◯部のうち」が
    *  同じ数を指すので、両方この値から作る（手打ちすると必ず片方だけ古くなる）。 */
   totalEdition: number;
-  /** 返品・返金した件数。
+  /** **手元に戻ってきて、もう一度売れる状態の冊数。**
    *
-   *  返金してもStripeの完了セッションは戻らないので、返品が出ると
-   *  「売れた数」が実売より多いまま固定される。その差をここで吸収する
-   *  （販売を止める閾値 = edition + refunded。`salesCap()` を使うこと）。
+   *  返金してもStripeの完了セッションは戻らないので、その分だけ枠が
+   *  埋まったままになる。その差をここで吸収する
+   *  （販売を止める閾値 = edition + restocked。`salesCap()` を使うこと）。
+   *
+   *  **「返金した件数」ではない。増やしてよいのは本が実際に戻ったときだけ。**
+   *  公開している返品ポリシー（/tokushoho）では、
+   *   - お客様都合の返品は受けない
+   *   - 不良品は **返送不要**（お客様が持ったまま）で返金・交換する
+   *  ので、**返金の大半は本が戻ってこない**。そこで増やすと、在庫が無いのに
+   *  購入ボタンが復活して受けられない注文が入る。
+   *
+   *  増やしてよいのは実質この2つだけ:
+   *   - 発送前にキャンセル・返金した（本は手元にある）
+   *   - こちらから返送をお願いして、売れる状態で戻ってきた
    *
    *  **edition を +1 して代用してはいけない。** edition は購入者への約束で、
    *  特定商取引法のページに「本サイトでの販売は◯部」として表示されるため、
-   *  返品のたびに法定表示の部数が勝手に増えることになる。 */
-  refunded: number;
+   *  1件ごとに法定表示の部数が勝手に増えることになる。 */
+  restocked: number;
   /** 手動の売り切れフラグ（自動判定と併用・どちらかが真ならSold Out） */
   soldOut: boolean;
   specs: string[];
@@ -92,10 +110,11 @@ export const SHIPPING_METHOD = "レターパックライト";
 export const COVER_PHOTO_POLICY =
   "表紙に貼り付けた写真の剥がれ・浮きは、経年での変化を想定した仕様であり、不良品には該当しません。";
 
-/** 販売を止める閾値。返金分は完了セッションから戻らないので、その件数だけ広げる。
+/** 販売を止める閾値。戻ってきて再販できる分は完了セッションから引かれないので、
+ *  その冊数だけ広げる。
  *  edition は購入者への約束なので動かさない（[[特商法ページ]]がこの値を表示している）。 */
 export function salesCap(product: Product): number {
-  return product.edition + product.refunded;
+  return product.edition + product.restocked;
 }
 
 /** 『Fade, Stay』の総エディション数。specs と特商法ページの両方がこれを使う。 */
@@ -110,7 +129,7 @@ export const products: Product[] = [
     paymentLinkId: null,
     edition: 30,
     totalEdition: FADE_STAY_EDITION,
-    refunded: 0,
+    restocked: 0,
     soldOut: false,
     specs: [
       "Photo zine",
@@ -183,14 +202,37 @@ function assertProducts(list: Product[]): void {
   for (const p of list) {
     // 購入リンクを入れた瞬間に salesCap が 0 になり、公開初日から Sold Out になる。
     // 「リンクを入れたのに買えない」は原因が見えにくいので、ここで止める。
-    if (p.paymentLinkId !== null && p.edition < 1) {
+    // 枠0以下は、購入リンクがあれば「公開初日からSold Out」、無くても法定表示が
+    // 「0部に達した時点で販売を終了します」という成立しない文になる。
+    // 店頭のみで売る本は products に入れない（このページは本サイトの販売条件を書く場所）。
+    if (p.edition < 1) {
       throw new Error(
-        `shop.ts: ${p.slug} は購入リンクが入っているのに edition が ${p.edition} です。` +
-          `販売枠が0なので、公開した瞬間から Sold Out 表示になります。`
+        `shop.ts: ${p.slug} の edition が ${p.edition} です。` +
+          `購入リンクがあれば公開した瞬間から Sold Out になり、無くても法定表示が` +
+          `「0部に達した時点で販売を終了します」という成立しない文になります。` +
+          `店頭のみで売る本は products に入れないでください。`
       );
     }
-    if (p.refunded < 0) {
-      throw new Error(`shop.ts: ${p.slug} の refunded が負の値です（${p.refunded}）。`);
+    // plink_ 以外を入れると Stripe が毎回 400 を返し、getSoldCount が常に null に
+    // なる＝自動Sold Out判定が一度も成立しないまま売り続ける。画面は正常に見える。
+    // Payment Link の URL（buy.stripe.com/...）の末尾を貼る取り違えが起きやすい。
+    if (p.paymentLinkId !== null && !p.paymentLinkId.startsWith("plink_")) {
+      throw new Error(
+        `shop.ts: ${p.slug} の paymentLinkId が "plink_" で始まっていません（${p.paymentLinkId}）。` +
+          `Payment Link の URL ではなく、ダッシュボードの plink_... を入れてください。`
+      );
+    }
+    if (p.restocked < 0) {
+      throw new Error(`shop.ts: ${p.slug} の restocked が負の値です（${p.restocked}）。`);
+    }
+    // Stripeのセッション一覧は1回100件までしか数えていない（src/lib/stripe.ts）。
+    // 枠が100以上になると「100件超え＝確実に売り切れ」と言い切れなくなるので、
+    // その時はページネーションを実装すること。
+    if (salesCap(p) >= 100) {
+      throw new Error(
+        `shop.ts: ${p.slug} の販売枠が ${salesCap(p)} で、Stripe集計の100件上限に達します。` +
+          `src/lib/stripe.ts のページネーション対応が必要です。`
+      );
     }
     // オンライン枠が総エディション数を超えていたら、どちらかの数字が古い。
     if (p.edition > p.totalEdition) {

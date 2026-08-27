@@ -16,10 +16,18 @@ import { getSoldCount } from "@/lib/stripe";
 // Stripeの販売数を定期的に取り直して自動Sold Out判定する
 export const revalidate = 60;
 
+// 部数は shop.ts から引く。ここに手打ちすると、増刷で totalEdition を変えたときに
+// 検索結果のスニペットとOGPだけ古い部数のまま残る（specs と特商法ページは自動追従する）。
+//
+// 「first photo book」は Fade, Stay だけの事実なので slug で縛る。products[0] に
+// 無条件で付けると、新刊を配列の先頭に足した瞬間にその本が「first」を名乗る。
+const featured = products.find((p) => p.slug === "fade-stay");
+
 export const metadata: Metadata = {
   title: "Shop — TAKUTO SUZUKI",
-  description:
-    "Photo books and printed works by Takuto Suzuki. Fade, Stay — first photo book, edition of 50.",
+  description: featured
+    ? `Photo books and printed works by Takuto Suzuki. ${featured.title} — first photo book, edition of ${featured.totalEdition}.`
+    : "Photo books and printed works by Takuto Suzuki.",
 };
 
 export default async function Shop() {

@@ -68,8 +68,13 @@ const entries: { label: string; value: React.ReactNode }[] = [
               {products.map((p) => (
                 <span key={p.slug} className="block">
                   『{p.title}』はエディション{p.totalEdition}部のうち、本サイトでの販売は
-                  {p.edition}部です。残部は店舗での対面販売に充てているため、本サイトでは
-                  {p.edition}部に達した時点で販売を終了します。
+                  {p.edition}部です。
+                  {/* 全部数をオンラインに回すと残部は0になる。その時に
+                      「残部は店舗での対面販売に充てている」と書くと、法定表示に
+                      事実でない理由を載せることになるので、条件で出し分ける */}
+                  {p.edition < p.totalEdition
+                    ? `残部は店舗での対面販売に充てているため、本サイトでは${p.edition}部に達した時点で販売を終了します。`
+                    : `本サイトでは${p.edition}部に達した時点で販売を終了します。`}
                 </span>
               ))}
             </>

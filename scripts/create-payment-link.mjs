@@ -7,7 +7,7 @@
  *
  * 鍵は --live なら .env.local の STRIPE_SECRET_KEY_LIVE、既定は STRIPE_SECRET_KEY。
  * **コマンドラインに sk_live_ を書かないこと**（シェル履歴に平文で残る）。
- * 設定値は shop.ts（price / edition / refunded / SHIPPING_JPY）から読むので手打ちしない。
+ * 設定値は shop.ts（price / edition / restocked / totalEdition / SHIPPING_* ）から読むので手打ちしない。
  * 作ったあとは必ず `node scripts/check-payment-link.mjs --live <plink_...>` を通す。
  *
  * なぜスクリプトにするか: 売価を変えるとPayment Linkは作り直しになる（既存リンクの
@@ -19,10 +19,27 @@
  * 意図的に作り直すときだけ --force を付ける。
  */
 
+import { createHash } from "node:crypto";
 import { loadKey, loadProduct, salesCap, parseArgs } from "./_shop-config.mjs";
 
-/** 設定を変えて作り直すときは v2, v3... と上げる */
-const IDEMPOTENCY_TAG = "fade-stay-v1";
+/** 冪等キーの版。
+ *
+ *  手で上げる運用にはしない。**設定は shop.ts 側にあり、あちらを変えた人が
+ *  こちらを上げてくれるとは限らない**（実際、価格・送料・発送日数・部数・配送方法は
+ *  すべて shop.ts の定数から引くようになったので、トリガーが別ファイルに移った）。
+ *  同じキーで違うパラメータを送ると Stripe は 400 idempotency_error を返し、
+ *  スクリプトは「途中まで作られたオブジェクトが残っているかも」としか言えない。
+ *
+ *  そこで送る値そのものから導出する。値が1つでも変われば別のキーになるので、
+ *  作り直しは自然に通り、同じ設定での再実行は今までどおり冪等になる。 */
+function idempotencyKeyFor(shop, cap, step) {
+  const fingerprint = [
+    shop.slug, shop.price, shop.shipping, shop.shippingDays,
+    shop.shippingMethod, shop.totalEdition, cap,
+  ].join("|");
+  const hash = createHash("sha256").update(fingerprint).digest("hex").slice(0, 12);
+  return `${shop.slug}-${hash}-${step}`;
+}
 
 async function stripe(key, path, params, idempotencyKey) {
   const res = await fetch(`https://api.stripe.com/v1/${path}`, {
@@ -30,7 +47,7 @@ async function stripe(key, path, params, idempotencyKey) {
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/x-www-form-urlencoded",
-      ...(idempotencyKey ? { "Idempotency-Key": `${IDEMPOTENCY_TAG}-${idempotencyKey}` } : {}),
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
     body: new URLSearchParams(params),
   });
@@ -43,13 +60,16 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const { key, isLive } = loadKey({ live: args.live });
   const shop = loadProduct(args.slug);
+  // 冪等キーは商品ごと・設定ごとに別物にする
+  // （slug を含めないと2商品目で衝突し、設定を含めないと作り直しが400になる）
+  const idem = (step) => idempotencyKeyFor(shop, salesCap(shop), step);
   if (shop.price === null) throw new Error("shop.ts の price が null です。先に売価を決めてください。");
 
   const cap = salesCap(shop);
   console.log(
     `\nモード: ${isLive ? "本番(live)" : "テスト(test)"}\n` +
       `商品: ${shop.title}（${shop.slug}）\n` +
-      `売価 ¥${shop.price} / 送料 ¥${shop.shipping} / 販売枠 ${cap}（edition ${shop.edition} + 返品 ${shop.refunded}）\n`
+      `売価 ¥${shop.price} / 送料 ¥${shop.shipping} / 販売枠 ${cap}（edition ${shop.edition} + 再販分 ${shop.restocked}）\n`
   );
 
   // --- 0. 重複チェック ---
@@ -72,10 +92,10 @@ async function main() {
 
   const product = await stripe(key, "products", {
     name: shop.title,
-    description: "写真集 / Photo zine, B5, 32 pages, edition of 50",
+    description: `写真集 / Photo zine, B5, 32 pages, edition of ${shop.totalEdition}`,
     shippable: "true",
     "metadata[slug]": shop.slug,
-  }, "product");
+  }, idem("product"));
   console.log(`✓ 商品        ${product.id}  ${product.name}`);
 
   const price = await stripe(key, "prices", {
@@ -83,16 +103,16 @@ async function main() {
     currency: "jpy",
     unit_amount: String(shop.price),
     tax_behavior: "inclusive",
-  }, "price");
+  }, idem("price"));
   console.log(`✓ 価格        ${price.id}  ¥${price.unit_amount}`);
 
   const rate = await stripe(key, "shipping_rates", {
-    display_name: "レターパックライト（全国一律）",
+    display_name: `${shop.shippingMethod}（全国一律）`,
     type: "fixed_amount",
     "fixed_amount[amount]": String(shop.shipping),
     "fixed_amount[currency]": "jpy",
     tax_behavior: "inclusive",
-  }, "shipping_rate");
+  }, idem("shipping_rate"));
   console.log(`✓ 配送料      ${rate.id}  ¥${rate.fixed_amount.amount}`);
 
   // 数量は1固定（adjustable_quantity を開けると支払い回数上限が冊数を守れなくなる）。
@@ -106,15 +126,18 @@ async function main() {
     "automatic_tax[enabled]": "false",
     inactive_message: "完売しました。お求めいただきありがとうございました。",
     "after_completion[type]": "hosted_confirmation",
+    // 日数は shop.ts の SHIPPING_DAYS から引く。ここに直書きすると、
+    // サイト2ページだけ新しい日数に変わり、決済完了直後に購入者が見る画面
+    // ＝手元に残る最後の約束だけが古いまま再生産される。
     "after_completion[hosted_confirmation][custom_message]":
-      "ご注文ありがとうございます。ご注文確認後、5営業日以内に発送します。",
+      `ご注文ありがとうございます。ご注文確認後、${shop.shippingDays}営業日以内に発送します。`,
     "metadata[slug]": shop.slug,
   };
 
   const createLink = (methods) => {
     const params = { ...linkParams };
     methods.forEach((m, i) => { params[`payment_method_types[${i}]`] = m; });
-    return stripe(key, "payment_links", params, `link-${methods.join("-")}`);
+    return stripe(key, "payment_links", params, idem(`link-${methods.join("-")}`));
   };
 
   let link;
@@ -130,8 +153,11 @@ async function main() {
   console.log("shop.ts に入れる値（**必ず両方セットで貼る**。片方だけだと検査を通っても壊れる）:");
   console.log(`  paymentLink: ${JSON.stringify(link.url)},`);
   console.log(`  paymentLinkId: ${JSON.stringify(link.id)},`);
+  // --slug を引き継がないと、次のコマンドが既定の fade-stay の価格・枠・送料で
+  // 別商品のリンクを検査する。価格が偶然同じなら「すべて OK」と出てしまう。
+  const slugFlag = args.slug === "fade-stay" ? "" : `--slug=${args.slug} `;
   console.log(
-    `\n次: node scripts/check-payment-link.mjs ${isLive ? "--live " : ""}${link.id}\n`
+    `\n次: node scripts/check-payment-link.mjs ${isLive ? "--live " : ""}${slugFlag}${link.id}\n`
   );
 }
 

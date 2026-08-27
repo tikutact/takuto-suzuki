@@ -26,6 +26,9 @@ const DEFERRED_METHODS = new Set([
 const results = [];
 const check = (ok, label, detail) => results.push({ ok, label, detail: detail ?? "" });
 
+/** テストモードで走らせたか。合格しても「発売してよい」とは言わせない */
+let isRehearsal = false;
+
 function report(extraError) {
   for (const r of results) {
     console.log(`${r.ok ? "✓" : "✗"} ${r.label}${r.detail ? `  — ${r.detail}` : ""}`);
@@ -36,9 +39,14 @@ function report(extraError) {
     process.exit(2);
   }
   const failed = results.filter((r) => !r.ok).length;
-  console.log(
-    `\n${failed === 0 ? "すべて OK。発売して問題ありません。" : `${failed} 件が未設定または不一致です。直してから発売してください。`}\n`
-  );
+  const verdict =
+    failed !== 0
+      ? `${failed} 件が未設定または不一致です。直してから発売してください。`
+      : isRehearsal
+        ? "すべて OK。ただし**テストモードのリハーサル**です。\n" +
+          "   本番のリンクは別物なので、発売前に `--live` で必ず通し直してください。"
+        : "すべて OK。発売して問題ありません。";
+  console.log(`\n${verdict}\n`);
   console.log(
     "※ このスクリプトで確認できないもの: 支払い成功の通知メールがONか、\n" +
       "   購入者への領収書メールがONか、Vercel本番の STRIPE_SECRET_KEY。\n"
@@ -67,12 +75,37 @@ async function main() {
   // --- 1. モードの一致 ---
   check(isLive === link.livemode, "キーとPayment Linkのモードが一致",
     `key=${isLive ? "live" : "test"} / link=${link.livemode ? "live" : "test"}`);
-  if (!link.livemode) check(false, "本番モードのリンクである", "テストモードのリンクです");
+  // ここで無条件に失敗させると、テストモードでのリハーサルに「全項目OK」の状態が
+  // 存在しなくなる。本物の設定漏れが1件混ざっても件数が増えるだけで見分けられない。
+  // 失敗にはせず、最後に「これはリハーサルである」と大きく出す（report側）。
+  if (!link.livemode) isRehearsal = true;
 
   // --- 2. リンクが有効 ---
   // 上限に達すると自動で active:false になり、上限を上げても復活しない（実測）。
-  check(link.active, "リンクが有効（active）",
-    link.active ? "" : "無効化されています。上限を上げただけでは復活しないので active=true を明示してください");
+  // 手動 soldOut はサイトの表示を消すだけで、Stripe のリンクには何も伝わらない。
+  // Payment Link の URL は過去のタブ・ブックマーク・共有先に残るので、
+  // active のままだと在庫が無いのに決済が通る（受けられない注文が入る）。
+  check(!(product.soldOut && link.active),
+    "shop.ts の soldOut と Stripe リンクの状態が整合",
+    product.soldOut && link.active
+      ? "shop.ts は soldOut:true ですが Payment Link が active のままです。URLを直接開けば購入できてしまいます（ダッシュボードでリンクを無効化してください）"
+      : "");
+
+  // active であるべきかは「まだ売る状態か」で変わる。ここを一律 active 必須にすると、
+  // **正しく完売した日にチェッカーを回すと「active=true にしろ」と言われる**
+  // （＝在庫ゼロで決済が通る状態に戻せ、という指示になる）。
+  // 完売は2経路ある: 手動の soldOut と、上限到達でStripeが自動で落とす方。両方見る。
+  const soldSoFar = link.restrictions?.completed_sessions?.count ?? null;
+  const capReached = soldSoFar !== null && soldSoFar >= salesCap(product);
+  if (product.soldOut || capReached) {
+    check(!link.active, "完売状態に合わせてリンクが無効（active=false）",
+      link.active
+        ? `完売（${product.soldOut ? "shop.ts の soldOut" : `上限到達 ${soldSoFar}/${salesCap(product)}`}）なのにリンクが生きています。ダッシュボードで無効化してください`
+        : "");
+  } else {
+    check(link.active, "リンクが有効（active）",
+      link.active ? "" : "無効化されています。上限を上げただけでは復活しないので active=true を明示してください");
+  }
 
   // --- 3. shop.ts の URL と、このリンクの URL が一致 ---
   // ID だけ貼り替えて URL を旧リンクのまま残すと、買い手は旧価格のページへ飛び、
@@ -112,7 +145,7 @@ async function main() {
   const cap = salesCap(product);
   const limit = link.restrictions?.completed_sessions?.limit ?? null;
   check(limit === cap,
-    `支払い回数の上限が ${cap}（edition ${product.edition} + 返品 ${product.refunded}）`,
+    `支払い回数の上限が ${cap}（edition ${product.edition} + 再販分 ${product.restocked}）`,
     `Stripe側=${limit ?? "未設定"}`);
 
   // --- 8. 配送先 ---
@@ -139,12 +172,18 @@ async function main() {
   // --- 10. 販売数（サイトと同じ数え方 + Stripeが上限判定に使っている値） ---
   const sessions = await stripeGet(key, "checkout/sessions", {
     payment_link: plinkId, status: "complete", limit: "100",
+    "expand[]": "data.line_items",
   });
-  // サイト側（src/lib/stripe.ts）と同じ条件にする。ここがズレると
-  // 「サイトは売り切れ、スクリプトはまだ在庫あり」と 食い違う数字が出る。
-  const paid = sessions.data.filter(
-    (s) => s.payment_status === "paid" || s.payment_status === "no_payment_required"
-  ).length;
+  // サイト側（src/lib/stripe.ts）と**同じ数え方**にする。以前はここだけセッション
+  // 件数を数えていたので、数量変更が有効になっていると「サイトは売り切れ、
+  // スクリプトはまだ在庫あり」と食い違う数字が黙って出ていた。冊数で数える。
+  const paid = sessions.data
+    .filter((s) => s.payment_status === "paid" || s.payment_status === "no_payment_required")
+    .reduce((sum, s) => {
+      const items = s.line_items?.data;
+      if (!items || items.length === 0) return sum + 1;
+      return sum + items.reduce((q, i) => q + (i.quantity ?? 1), 0);
+    }, 0);
   const stripeCount = link.restrictions?.completed_sessions?.count ?? null;
   check(!sessions.has_more, "完了セッションが100件以内（1回で数え切れている）",
     sessions.has_more ? "100件を超えており、この販売数は過少です" : "");
