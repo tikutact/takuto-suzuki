@@ -36,6 +36,10 @@ export type Product = SaleConfig & {
    *  返品1件につき上限を +1 する必要がある。
    *  上記3点は `node scripts/check-payment-link.mjs` で機械判定できる。 */
   edition: number;
+  /** 作品の総エディション数（店頭販売分を含む）。
+   *  specs の "Edition of ◯" と特商法ページの「エディション◯部のうち」が
+   *  同じ数を指すので、両方この値から作る（手打ちすると必ず片方だけ古くなる）。 */
+  totalEdition: number;
   /** 返品・返金した件数。
    *
    *  返金してもStripeの完了セッションは戻らないので、返品が出ると
@@ -71,11 +75,31 @@ export type ShopImage = {
  *  変更時は Stripe の配送料レートも作り直すこと（サイト表示とStripeの二重管理）。 */
 export const SHIPPING_JPY = 430;
 
+/* 以下は /shop（商品ページ）と /tokushoho（法定表示）の両方に出る事実。
+ * 片方だけ直すと「サイトの表示」と「特定商取引法に基づく表記」が食い違うので、
+ * 必ずここから引く。語尾は各ページの文体に合わせてよいが、数字と可否は動かさない。
+ * なお発送メールの定型文 `docs/shop-emails.md` にも同じ内容が書いてある。
+ * あれは人が読んで貼るテキストなのでコードからは生成しない＝ここを変えたら手で直す。 */
+
+/** 発送までの営業日数（ご注文確認後・土日祝を除く）。 */
+export const SHIPPING_DAYS = 5;
+
+/** 配送方法。 */
+export const SHIPPING_METHOD = "レターパックライト";
+
+/** 表紙写真の剥がれ・浮きの扱い。返品可否に直結する保証範囲の言明なので、
+ *  両ページで**同一文**にする（語尾だけ違うと、どちらが正なのか読めなくなる）。 */
+export const COVER_PHOTO_POLICY =
+  "表紙に貼り付けた写真の剥がれ・浮きは、経年での変化を想定した仕様であり、不良品には該当しません。";
+
 /** 販売を止める閾値。返金分は完了セッションから戻らないので、その件数だけ広げる。
  *  edition は購入者への約束なので動かさない（[[特商法ページ]]がこの値を表示している）。 */
 export function salesCap(product: Product): number {
   return product.edition + product.refunded;
 }
+
+/** 『Fade, Stay』の総エディション数。specs と特商法ページの両方がこれを使う。 */
+const FADE_STAY_EDITION = 50;
 
 export const products: Product[] = [
   {
@@ -85,13 +109,14 @@ export const products: Product[] = [
     paymentLink: null,
     paymentLinkId: null,
     edition: 30,
+    totalEdition: FADE_STAY_EDITION,
     refunded: 0,
     soldOut: false,
     specs: [
       "Photo zine",
       "B5 / 32 pages",
       "Saddle-stitched with silver thread",
-      "Edition of 50",
+      `Edition of ${FADE_STAY_EDITION}`,
     ],
     description: [
       "家を出て、太陽にあたって、雨に降られて、",
@@ -149,6 +174,34 @@ export const products: Product[] = [
     ],
   },
 ];
+
+/** 型では表せない設定の矛盾をビルドで落とす。
+ *
+ *  ここを通る条件は「間違えても画面は普通に出るが、売れなくなる／表示が嘘になる」もの。
+ *  静かに壊れて気づけない類なので、黙って表示するより落とした方が安い。 */
+function assertProducts(list: Product[]): void {
+  for (const p of list) {
+    // 購入リンクを入れた瞬間に salesCap が 0 になり、公開初日から Sold Out になる。
+    // 「リンクを入れたのに買えない」は原因が見えにくいので、ここで止める。
+    if (p.paymentLinkId !== null && p.edition < 1) {
+      throw new Error(
+        `shop.ts: ${p.slug} は購入リンクが入っているのに edition が ${p.edition} です。` +
+          `販売枠が0なので、公開した瞬間から Sold Out 表示になります。`
+      );
+    }
+    if (p.refunded < 0) {
+      throw new Error(`shop.ts: ${p.slug} の refunded が負の値です（${p.refunded}）。`);
+    }
+    // オンライン枠が総エディション数を超えていたら、どちらかの数字が古い。
+    if (p.edition > p.totalEdition) {
+      throw new Error(
+        `shop.ts: ${p.slug} のオンライン販売枠 ${p.edition} が総エディション数 ${p.totalEdition} を超えています。`
+      );
+    }
+  }
+}
+
+assertProducts(products);
 
 export function getProduct(slug: string): Product | undefined {
   return products.find((p) => p.slug === slug);

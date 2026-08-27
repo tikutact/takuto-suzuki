@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { products, SHIPPING_JPY } from "@/lib/shop";
+import {
+  products,
+  COVER_PHOTO_POLICY,
+  SHIPPING_DAYS,
+  SHIPPING_JPY,
+  SHIPPING_METHOD,
+} from "@/lib/shop";
 import { CONTACT_EMAIL, mailtoWithSubject } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
@@ -44,20 +50,38 @@ const entries: { label: string; value: React.ReactNode }[] = [
   { label: "販売価格", value: "各商品ページに表示する価格（消費税込み）" },
   {
     label: "商品代金以外の必要料金",
-    value: `送料 全国一律 ${SHIPPING_JPY.toLocaleString()}円（消費税込み）。レターパックライトにて発送いたします。`,
+    value: `送料 全国一律 ${SHIPPING_JPY.toLocaleString()}円（消費税込み）。${SHIPPING_METHOD}にて発送いたします。`,
   },
   { label: "配送地域", value: "日本国内のみ" },
-  {
-    label: "販売数量の制限",
-    // 部数は shop.ts の edition を参照する（手打ちすると必ず乖離するため）
-    value: `『${products[0].title}』はエディション50部のうち、本サイトでの販売は${products[0].edition}部です。残部は店舗での対面販売に充てているため、本サイトでは${products[0].edition}部に達した時点で販売を終了します。`,
-  },
+  // 部数は shop.ts の edition / totalEdition を参照する（手打ちすると必ず乖離するため）。
+  //
+  // products[0] を直に読まないこと。商品を一時的に全部下げると products が空になり、
+  // このファイルは module スコープで配列を組み立てているので、**サイト全体のビルドが落ちる**。
+  // 法定表示のページは商品が無くても開けなければならない。
+  // 商品が増えたときに1件目しか載らない問題も同時に消える。
+  ...(products.length > 0
+    ? [
+        {
+          label: "販売数量の制限",
+          value: (
+            <>
+              {products.map((p) => (
+                <span key={p.slug} className="block">
+                  『{p.title}』はエディション{p.totalEdition}部のうち、本サイトでの販売は
+                  {p.edition}部です。残部は店舗での対面販売に充てているため、本サイトでは
+                  {p.edition}部に達した時点で販売を終了します。
+                </span>
+              ))}
+            </>
+          ),
+        },
+      ]
+    : []),
   { label: "お支払い方法", value: "クレジットカード決済（Stripe）" },
   { label: "お支払い時期", value: "ご注文時にお支払いが確定します" },
   {
     label: "商品の引き渡し時期",
-    value:
-      "ご注文確認後、5営業日以内に発送いたします（土日祝を除く）",
+    value: `ご注文確認後、${SHIPPING_DAYS}営業日以内に発送いたします（土日祝を除く）`,
   },
   {
     label: "返品・交換について",
@@ -76,7 +100,7 @@ const entries: { label: string; value: React.ReactNode }[] = [
         なお、当方から商品のご返送をお願いする場合、返送にかかる送料は当方が負担いたします。
         <br />
         <br />
-        表紙に貼り付けた写真の剥がれ・浮きは、経年での変化を想定した仕様であり不良品には該当しません。
+        {COVER_PHOTO_POLICY}
       </>
     ),
   },

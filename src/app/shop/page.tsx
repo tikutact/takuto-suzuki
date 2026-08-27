@@ -3,7 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumb } from "@/lib/structured-data";
-import { products, salesCap, SHIPPING_JPY } from "@/lib/shop";
+import {
+  products,
+  salesCap,
+  COVER_PHOTO_POLICY,
+  SHIPPING_DAYS,
+  SHIPPING_JPY,
+  SHIPPING_METHOD,
+} from "@/lib/shop";
 import { getSoldCount } from "@/lib/stripe";
 
 // Stripeの販売数を定期的に取り直して自動Sold Out判定する
@@ -148,17 +155,18 @@ export default async function Shop() {
         </div>
 
         <div className="mt-24 pt-8 border-t border-neutral-100 space-y-2">
+          {/* 発送・返品まわりの数字と可否は shop.ts の定数から引く。
+              ここと /tokushoho（法定表示）で食い違うと、書いてある方が正になってしまう */}
           <p className="text-xs text-neutral-400 leading-relaxed">
-            送料は全国一律 ¥{SHIPPING_JPY.toLocaleString()}
-            （レターパックライト・追跡あり）。
+            送料は全国一律 ¥{SHIPPING_JPY.toLocaleString()}（{SHIPPING_METHOD}
+            ・追跡あり）。
             <br />
             お届けは日本国内のみです。
             <br />
-            ご注文確認後、5営業日以内に発送します（土日祝を除く）。
+            ご注文確認後、{SHIPPING_DAYS}営業日以内に発送します（土日祝を除く）。
           </p>
           <p className="text-xs text-neutral-400 leading-relaxed">
-            表紙の写真は1冊ずつ手作業で貼っています。経年で剥がれることを
-            想定した設計のため、剥がれや浮きは不良ではありません。
+            1冊ずつ手作業で写真を貼っています。{COVER_PHOTO_POLICY}
           </p>
           <Link
             href="/tokushoho"
