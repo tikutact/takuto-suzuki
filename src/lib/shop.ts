@@ -213,7 +213,7 @@ function assertProducts(list: Product[]): void {
           `店頭のみで売る本は products に入れないでください。`
       );
     }
-    // plink_ 以外を入れると Stripe が毎回 400 を返し、getSoldCount が常に null に
+    // plink_ 以外を入れると Stripe が毎回 400 を返し、getPaymentLinkState が常に null に
     // なる＝自動Sold Out判定が一度も成立しないまま売り続ける。画面は正常に見える。
     // Payment Link の URL（buy.stripe.com/...）の末尾を貼る取り違えが起きやすい。
     if (p.paymentLinkId !== null && !p.paymentLinkId.startsWith("plink_")) {
@@ -224,15 +224,6 @@ function assertProducts(list: Product[]): void {
     }
     if (p.restocked < 0) {
       throw new Error(`shop.ts: ${p.slug} の restocked が負の値です（${p.restocked}）。`);
-    }
-    // Stripeのセッション一覧は1回100件までしか数えていない（src/lib/stripe.ts）。
-    // 枠が100以上になると「100件超え＝確実に売り切れ」と言い切れなくなるので、
-    // その時はページネーションを実装すること。
-    if (salesCap(p) >= 100) {
-      throw new Error(
-        `shop.ts: ${p.slug} の販売枠が ${salesCap(p)} で、Stripe集計の100件上限に達します。` +
-          `src/lib/stripe.ts のページネーション対応が必要です。`
-      );
     }
     // オンライン枠が総エディション数を超えていたら、どちらかの数字が古い。
     if (p.edition > p.totalEdition) {

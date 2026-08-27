@@ -170,25 +170,49 @@ async function main() {
   }
 
   // --- 10. 販売数（サイトと同じ数え方 + Stripeが上限判定に使っている値） ---
-  const sessions = await stripeGet(key, "checkout/sessions", {
-    payment_link: plinkId, status: "complete", limit: "100",
-    "expand[]": "data.line_items",
-  });
-  // サイト側（src/lib/stripe.ts）と**同じ数え方**にする。以前はここだけセッション
-  // 件数を数えていたので、数量変更が有効になっていると「サイトは売り切れ、
-  // スクリプトはまだ在庫あり」と食い違う数字が黙って出ていた。冊数で数える。
-  const paid = sessions.data
-    .filter((s) => s.payment_status === "paid" || s.payment_status === "no_payment_required")
-    .reduce((sum, s) => {
-      const items = s.line_items?.data;
-      if (!items || items.length === 0) return sum + 1;
-      return sum + items.reduce((q, i) => q + (i.quantity ?? 1), 0);
-    }, 0);
+  // 1回100件までしか返らないので最後までページ送りする。ここを1ページで止めると、
+  // 増刷して枠が100を超えたときに販売数が黙って過少になる。
+  const allSessions = [];
+  let after;
+  for (;;) {
+    const page = await stripeGet(key, "checkout/sessions", {
+      payment_link: plinkId, status: "complete", limit: "100",
+      "expand[]": "data.line_items",
+      ...(after ? { starting_after: after } : {}),
+    });
+    allSessions.push(...page.data);
+    if (!page.has_more || page.data.length === 0) break;
+    after = page.data[page.data.length - 1].id;
+  }
+
+  // サイト（src/lib/stripe.ts）は Payment Link 自身の completed_sessions.count を
+  // 見るようになったので、ここは**突き合わせ用の別勘定**。
+  const isPaid = (s) =>
+    s.payment_status === "paid" || s.payment_status === "no_payment_required";
+  const copies = (s) => {
+    const items = s.line_items?.data;
+    if (!items || items.length === 0) return 1;
+    return items.reduce((q, i) => q + (i.quantity ?? 1), 0);
+  };
+  const paid = allSessions.filter(isPaid).reduce((sum, s) => sum + copies(s), 0);
+  const unpaid = allSessions.length - allSessions.filter(isPaid).length;
   const stripeCount = link.restrictions?.completed_sessions?.count ?? null;
-  check(!sessions.has_more, "完了セッションが100件以内（1回で数え切れている）",
-    sessions.has_more ? "100件を超えており、この販売数は過少です" : "");
-  check(true, `販売数: 入金済み ${paid} / 枠 ${cap}`,
-    stripeCount !== null ? `Stripeが上限判定に使う件数=${stripeCount}` : "");
+
+  check(true, `販売数: 入金済み ${paid}冊 / 枠 ${cap}`,
+    stripeCount !== null ? `サイトが見る件数（Stripeの上限判定と同じ値）=${stripeCount}` : "");
+
+  // ズレは2方向あって、原因も対処も逆。まとめて1つの判定にすると誤診する。
+  // ・冊数 > 件数 … 1回のチェックアウトで複数冊出ている（上限が冊数を守れない）
+  // ・冊数 < 件数 … 完了したが未入金のセッションが枠だけ食っている（後払い系）
+  check(stripeCount === null || paid <= stripeCount,
+    "1セッションあたり1冊（冊数がStripeの件数を超えていない）",
+    stripeCount !== null && paid > stripeCount
+      ? `入金済み${paid}冊 に対しStripeの件数は${stripeCount}。1回で複数冊売れており、支払い回数の上限では冊数を守れていません`
+      : "");
+  check(unpaid === 0, "未入金のまま枠を食っているセッションが無い",
+    unpaid > 0
+      ? `完了したが未入金のセッションが${unpaid}件あります。Stripeの上限は消費されるのに冊数には数えません`
+      : "");
 
   report();
 }

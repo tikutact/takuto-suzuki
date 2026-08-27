@@ -5,13 +5,12 @@ import JsonLd from "@/components/JsonLd";
 import { breadcrumb } from "@/lib/structured-data";
 import {
   products,
-  salesCap,
   COVER_PHOTO_POLICY,
   SHIPPING_DAYS,
   SHIPPING_JPY,
   SHIPPING_METHOD,
 } from "@/lib/shop";
-import { getSoldCount } from "@/lib/stripe";
+import { saleStatus } from "@/lib/sale-status";
 
 // Stripeの販売数を定期的に取り直して自動Sold Out判定する
 export const revalidate = 60;
@@ -31,14 +30,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Shop() {
-  const soldOutFlags = await Promise.all(
-    products.map(async (product) => {
-      if (product.soldOut) return true;
-      if (!product.paymentLinkId) return false;
-      const sold = await getSoldCount(product.paymentLinkId);
-      return sold !== null && sold >= salesCap(product);
-    })
-  );
+  const statuses = await Promise.all(products.map(saleStatus));
 
   return (
     <div className="pt-8 pb-16 md:pt-24 md:pb-24">
@@ -119,11 +111,11 @@ export default async function Shop() {
                 )}
               </p>
 
-              {soldOutFlags[i] ? (
+              {statuses[i] === "sold_out" ? (
                 <div className="w-full border border-neutral-200 py-3 text-xs tracking-[0.3em] uppercase text-neutral-300 text-center">
                   Sold Out
                 </div>
-              ) : product.paymentLink && product.price !== null ? (
+              ) : statuses[i] === "purchase" && product.paymentLink ? (
                 <a
                   href={product.paymentLink}
                   className="block w-full border border-black py-3 text-xs tracking-[0.3em] uppercase text-center hover:bg-black hover:text-white transition-colors duration-300"
