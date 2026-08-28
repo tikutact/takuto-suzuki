@@ -7,6 +7,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "",
     "/works",
     "/works/2026",
+    "/works/fade-stay",
     "/film",
     "/shop",
     "/biography",

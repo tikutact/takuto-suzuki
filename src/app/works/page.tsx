@@ -11,6 +11,12 @@ const series = [
     sub: "21 photographs",
     cover: "/images/cast-02.jpg",
   },
+  {
+    slug: "fade-stay",
+    title: "Fade, Stay",
+    sub: "Photo zine, 2026",
+    cover: "/images/fade-stay-cover-photo.jpg",
+  },
 ];
 
 export default function Works() {
