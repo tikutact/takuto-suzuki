@@ -129,7 +129,10 @@ export const products: Product[] = [
     paymentLinkId: null,
     edition: 30,
     totalEdition: FADE_STAY_EDITION,
-    restocked: 0,
+    // 2026-08-31: 発売前の自分テスト購入(¥2,930)を返金。本は手元にあり売れる状態
+    // （edition は動かさない — 購入者への約束のため）。Stripe側の上限も30→31に
+    // 更新済み(scripts/bump-restock.mjs)。
+    restocked: 1,
     soldOut: false,
     specs: [
       "Photo zine",
