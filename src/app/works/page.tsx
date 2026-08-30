@@ -2,24 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumb } from "@/lib/structured-data";
-
-const series = [
-  {
-    slug: "2026",
-    title: "2026",
-    // 年の下に出るのは年ではなく点数。年を二度書いても情報が増えない
-    sub: "21 photographs",
-    cover: "/images/cast-02.jpg",
-  },
-  {
-    slug: "fade-stay",
-    title: "Fade, Stay",
-    sub: "Photo zine, 2026",
-    cover: "/images/fade-stay-cover-photo.jpg",
-  },
-];
+import { getAllSeries } from "@/lib/works";
 
 export default function Works() {
+  const series = getAllSeries();
   return (
     <div className="pt-6 pb-16 md:pt-16 md:pb-24">
       <JsonLd

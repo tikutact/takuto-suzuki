@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "2026",
+    "title": "2026",
+    "layout": "grid",
+    "year": "2026",
+    "cover": "/images/cast-02.jpg",
+    "photos": [
+      "/images/cast-08.jpg",
+      "/images/trace-05.jpg",
+      "/images/cast-03.jpg",
+      "/images/trace-10.jpg",
+      "/images/cast-01.jpg",
+      "/images/trace-01.jpg",
+      "/images/ordinary-03.jpg",
+      "/images/ordinary-08.jpg",
+      "/images/cast-07.jpg",
+      "/images/trace-02.jpg",
+      "/images/trace-11.jpg",
+      "/images/trace-07.jpg",
+      "/images/trace-12.jpg",
+      "/images/cast-02.jpg",
+      "/images/cast-05.jpg",
+      "/images/trace-04.jpg",
+      "/images/trace-09.jpg",
+      "/images/trace-03.jpg",
+      "/images/ordinary-06.jpg",
+      "/images/trace-08.jpg",
+      "/images/cast-06.jpg"
+    ]
+  },
+  {
+    "slug": "fade-stay",
+    "title": "Fade, Stay",
+    "layout": "stack",
+    "year": "2026",
+    "sub": "Photo zine, 2026",
+    "photos": [
+      "/images/fade-stay-cover-photo.jpg",
+      "/images/fade-stay-01.jpg",
+      "/images/fade-stay-02.jpg",
+      "/images/fade-stay-03.jpg",
+      "/images/fade-stay-04.jpg",
+      "/images/fade-stay-05.jpg",
+      "/images/fade-stay-06.jpg",
+      "/images/fade-stay-07.jpg",
+      "/images/fade-stay-08.jpg"
+    ]
+  }
+]

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { getAllSeries } from "@/lib/works";
 
 const links = [
   { href: "/works", label: "Works" },
@@ -12,13 +13,9 @@ const links = [
   { href: "/contact", label: "Contact" },
 ];
 
-// Works の下に出る子項目。年でまとめる方針にしたので年を並べる
-// （2026-08-19にシリーズ名 cast/trace/ordinary を廃止）。
-// 年を増やすときはここと sitemap.ts の両方に足す。
-const series = [
-  { slug: "2026", title: "2026" },
-  { slug: "fade-stay", title: "Fade, Stay" },
-];
+// Works の下に出る子項目。src/content/works.json が唯一のソース
+// （シリーズの追加・並べ替えは works.json を編集するだけでここにも反映される）。
+const series = getAllSeries();
 
 export default function Nav() {
   const pathname = usePathname();

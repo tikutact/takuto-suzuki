@@ -1,19 +1,17 @@
 import type { MetadataRoute } from "next";
 import { getAllPosts } from "@/lib/journal";
+import { getAllSeries } from "@/lib/works";
 import { SITE_URL, fullDate } from "@/lib/structured-data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = [
-    "",
-    "/works",
-    "/works/2026",
-    "/works/fade-stay",
-    "/film",
-    "/shop",
-    "/biography",
-    "/contact",
-  ].map((path) => ({
-    url: `${SITE_URL}${path}`,
+  const staticRoutes = ["", "/works", "/film", "/shop", "/biography", "/contact"].map(
+    (path) => ({
+      url: `${SITE_URL}${path}`,
+    })
+  );
+
+  const seriesRoutes = getAllSeries().map((series) => ({
+    url: `${SITE_URL}/works/${series.slug}`,
   }));
 
   const journalRoutes = getAllPosts().map((post) => {
@@ -24,5 +22,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
-  return [...staticRoutes, ...journalRoutes];
+  return [...staticRoutes, ...seriesRoutes, ...journalRoutes];
 }
