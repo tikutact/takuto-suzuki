@@ -22,11 +22,24 @@ export const revalidate = 60;
 // 無条件で付けると、新刊を配列の先頭に足した瞬間にその本が「first」を名乗る。
 const featured = products.find((p) => p.slug === "fade-stay");
 
+const description = featured
+  ? `Photo books and printed works by Takuto Suzuki. ${featured.title} — first photo book, edition of ${featured.totalEdition}.`
+  : "Photo books and printed works by Takuto Suzuki.";
+
 export const metadata: Metadata = {
   title: "Shop — TAKUTO SUZUKI",
-  description: featured
-    ? `Photo books and printed works by Takuto Suzuki. ${featured.title} — first photo book, edition of ${featured.totalEdition}.`
-    : "Photo books and printed works by Takuto Suzuki.",
+  description,
+  openGraph: {
+    title: "Shop — TAKUTO SUZUKI",
+    description,
+    images: [{ url: "/og/shop.jpg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Shop — TAKUTO SUZUKI",
+    description,
+    images: ["/og/shop.jpg"],
+  },
 };
 
 export default async function Shop() {

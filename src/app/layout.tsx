@@ -33,6 +33,23 @@ export const metadata: Metadata = {
   verification: {
     google: "eTUWPhodK0Lv2sK970oRWlhWy9QHQpbodWo0R1cHCq0",
   },
+  // ページ側で openGraph/twitter を上書きしなければこれが使われる（既定値ゼロ対策）。
+  // 個別ページで images だけ差し替えたい場合は openGraph: { images: [...] } のみ書けば
+  // title/description/siteName/locale/type はここから継承される。
+  openGraph: {
+    title: "TAKUTO SUZUKI — Photographer",
+    description: "Photography portfolio of Takuto Suzuki.",
+    siteName: "TAKUTO SUZUKI",
+    locale: "ja_JP",
+    type: "website",
+    images: [{ url: "/og/default.jpg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TAKUTO SUZUKI — Photographer",
+    description: "Photography portfolio of Takuto Suzuki.",
+    images: ["/og/default.jpg"],
+  },
 };
 
 export default function RootLayout({
