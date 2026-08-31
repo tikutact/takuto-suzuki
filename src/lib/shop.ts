@@ -125,8 +125,8 @@ export const products: Product[] = [
     slug: "fade-stay",
     title: "Fade, Stay",
     price: 2500,
-    paymentLink: null,
-    paymentLinkId: null,
+    paymentLink: "https://buy.stripe.com/bJecN66uiey59Hzc0xbjW00",
+    paymentLinkId: "plink_1U5eu2IW23ovDw2SnrgfmW6s",
     edition: 30,
     totalEdition: FADE_STAY_EDITION,
     // 2026-08-31: 発売前の自分テスト購入(¥2,930)を返金。本は手元にあり売れる状態
