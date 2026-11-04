@@ -20,7 +20,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { loadKey, loadProduct, salesCap, parseArgs, findDuplicateLinks } from "./_shop-config.mjs";
+import { loadKey, loadProduct, salesCap, parseArgs, findDuplicateLinks, checkoutNotice } from "./_shop-config.mjs";
 
 /** 冪等キーの版。
  *
@@ -134,6 +134,8 @@ async function main() {
     // ＝手元に残る最後の約束だけが古いまま再生産される。
     "after_completion[hosted_confirmation][custom_message]":
       `ご注文ありがとうございます。ご注文確認後、${shop.shippingDays}営業日以内に発送します。`,
+    // 決済ボタンの近くに出す引渡し時期・返品条件（特商法の最終確認画面・checkoutNotice）
+    "custom_text[submit][message]": checkoutNotice(shop),
     "metadata[slug]": shop.slug,
   };
 

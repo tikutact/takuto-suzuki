@@ -202,3 +202,23 @@ export function findDuplicateLinks({ ok, status, body }, shop) {
       (shop.paymentLinkId !== null && shop.paymentLinkId !== undefined && l.id === shop.paymentLinkId)
   );
 }
+
+/**
+ * 決済ボタンの近くに出す文（Payment Link の custom_text[submit][message]）。
+ *
+ * 特商法の「最終確認画面」（2022年6月施行）で出すべき項目のうち、Stripe の決済画面が
+ * 自分では出さない「引渡し時期」と「返品・申込みの撤回の条件」をここで出す。
+ * 価格・数量・送料・支払い方法は決済画面に既に出ている。
+ * 日数は SHIPPING_DAYS から引く（直書きすると /shop・/tokushoho と食い違う）。
+ * 文言を変えるときは /tokushoho の「返品・交換について」とそろえること。
+ * create-payment-link.mjs（作成時）・set-checkout-notice.mjs（既存リンクの更新）・
+ * check-payment-link.mjs（検査）の3つがこの関数を使う。
+ */
+export function checkoutNotice(shop) {
+  return (
+    `ご注文確認後、${shop.shippingDays}営業日以内に発送いたします（土日祝を除く）。` +
+    "商品の性質上、お客様のご都合による返品・交換・キャンセルはお受けできません。" +
+    "不良品の場合は、商品到着後7日以内にご連絡いただければ良品と交換いたします。" +
+    "詳しくは特定商取引法に基づく表記 https://www.takutosuzuki.com/tokushoho をご覧ください。"
+  );
+}

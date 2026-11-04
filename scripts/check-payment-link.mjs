@@ -14,7 +14,7 @@
  * 一切検知できないので、ここでまとめて突き合わせる。
  */
 
-import { loadKey, loadProduct, salesCap, parseArgs, stripeGet } from "./_shop-config.mjs";
+import { loadKey, loadProduct, salesCap, parseArgs, stripeGet, checkoutNotice } from "./_shop-config.mjs";
 
 /** 入金が後から起きる決済手段。complete でも未入金のまま販売枠だけ消費するので使わない
  *  （Stripeの支払い回数上限は消費するのに、当方の集計は入金済みしか数えない＝乖離する） */
@@ -184,6 +184,14 @@ async function main() {
     daysInMsg.length === 0
       ? `完了画面に日数の記載なし（type=${link.after_completion?.type ?? "?"}）`
       : `完了画面=${daysInMsg.join(",")}営業日`);
+
+  // --- 9c. 決済ボタン近くの文（特商法の最終確認画面） ---
+  // 引渡し時期と返品・キャンセルの条件は Stripe の決済画面が自分では出さないので、
+  // custom_text で出している。日数を変えたのにリンク側が古いまま、もここで拾う
+  const submitMsg = link.custom_text?.submit?.message ?? "";
+  check(submitMsg === checkoutNotice(product),
+    "決済ボタン近くに発送時期・返品条件の文がある（特商法の最終確認画面）",
+    submitMsg === "" ? "未設定＝node scripts/set-checkout-notice.mjs --live で入れる" : "文面が checkoutNotice() と違う（日数変更後の更新漏れ？）");
 
   // --- 10. 販売数（サイトと同じ数え方 + Stripeが上限判定に使っている値） ---
   // 1回100件までしか返らないので最後までページ送りする。ここを1ページで止めると、

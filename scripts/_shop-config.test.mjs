@@ -1,7 +1,7 @@
 // node --test 'scripts/*.test.mjs'（Stripe には接続しない。架空のリンク一覧で判定する）
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findDuplicateLinks } from "./_shop-config.mjs";
+import { findDuplicateLinks, checkoutNotice } from "./_shop-config.mjs";
 
 const shop = { slug: "fade-stay", paymentLinkId: "plink_TEST_LIVE" };
 
@@ -26,4 +26,12 @@ test("一覧が100件で打ち切られている（has_more）なら確認しき
 test("別商品のリンクは拾わない", () => {
   const dup = findDuplicateLinks({ ok: true, body: { data: [{ id: "plink_Y", metadata: { slug: "other" } }] } }, shop);
   assert.equal(dup.length, 0);
+});
+
+test("決済ボタン近くの文は shop.ts の発送日数を使い、返品条件と特商法ページを含む", () => {
+  const msg = checkoutNotice({ shippingDays: 7 });
+  assert.match(msg, /7営業日以内に発送/);
+  assert.match(msg, /返品・交換・キャンセルはお受けできません/);
+  assert.match(msg, /takutosuzuki\.com\/tokushoho/);
+  assert.ok(msg.length <= 1200, "Stripe の custom_text は1200字まで");
 });
