@@ -112,6 +112,10 @@ https://www.takutosuzuki.com
 上限を戻しても復活しない。そのうえで Payment Link を `active=true` にし、
 **コードを push する**（`restocked` はコードなのでデプロイしないとサイトの枠は増えない）。
 
+Stripe 側を `node scripts/bump-restock.mjs --live plink_...` でやる場合は、
+**shop.ts の `restocked` を変える前に**実行する（スクリプトは shop.ts の現在値 +1 を
+上限にするので、先に shop.ts を上げると +2 になる。今は不一致を検出して止まる）。
+
 `node scripts/check-payment-link.mjs --live` で確認できるのは **Stripe 側の3点だけ**。
 **push 済みかどうかは判定できない**（チェッカーはローカルの shop.ts を読むので、
 合格しても本番がまだ古いことがある）。
