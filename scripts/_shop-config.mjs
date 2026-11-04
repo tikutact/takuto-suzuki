@@ -175,3 +175,30 @@ export async function stripeGet(key, path, params = {}) {
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status} ${json.error?.message ?? ""}`);
   return json;
 }
+
+/**
+ * create-payment-link.mjs の重複チェック（GET /v1/payment_links?active=true の結果を判定する）。
+ *
+ * 以前は応答の成否を見ずに `existing.data ?? []` としていたため、レート制限や一時障害で
+ * 一覧が取れないと「重複なし」と判定してそのまま作成に進んでいた。また metadata.slug でしか
+ * 照合していなかったので、**ダッシュボードで作った（metadata の無い）現行リンクを見逃す**。
+ * 現行リンクは shop.ts の paymentLinkId で必ず分かるので、それも重複として扱う。
+ */
+export function findDuplicateLinks({ ok, status, body }, shop) {
+  if (!ok) {
+    throw new Error(
+      `有効なPayment Linkの一覧を取得できませんでした（HTTP ${status} ${body?.error?.message ?? ""}）。` +
+        `重複を確認できないので作成しません。`
+    );
+  }
+  if (body?.has_more) {
+    throw new Error(
+      "有効なPayment Linkが100本を超えていて、重複を確認しきれません。不要なリンクを無効化してから再実行してください。"
+    );
+  }
+  return (body?.data ?? []).filter(
+    (l) =>
+      l.metadata?.slug === shop.slug ||
+      (shop.paymentLinkId !== null && shop.paymentLinkId !== undefined && l.id === shop.paymentLinkId)
+  );
+}

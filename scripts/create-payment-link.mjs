@@ -20,7 +20,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { loadKey, loadProduct, salesCap, parseArgs } from "./_shop-config.mjs";
+import { loadKey, loadProduct, salesCap, parseArgs, findDuplicateLinks } from "./_shop-config.mjs";
 
 /** 冪等キーの版。
  *
@@ -75,11 +75,14 @@ async function main() {
   // --- 0. 重複チェック ---
   // 冪等キーは24時間で失効するので、後日の再実行は「もう1本の有効なリンク」を生む。
   // 古いリンクが生きたまま新しいリンクを貼ると、上限30の枠が2本ぶん（実質60）になる。
-  const existing = await fetch(
+  const existingRes = await fetch(
     `https://api.stripe.com/v1/payment_links?active=true&limit=100`,
     { headers: { Authorization: `Bearer ${key}` } }
-  ).then((r) => r.json());
-  const dup = (existing.data ?? []).filter((l) => l.metadata?.slug === shop.slug);
+  );
+  const dup = findDuplicateLinks(
+    { ok: existingRes.ok, status: existingRes.status, body: await existingRes.json().catch(() => null) },
+    shop
+  );
   if (dup.length && !args.force) {
     console.error(
       `この商品の有効なPayment Linkが既に ${dup.length} 本あります:\n` +
