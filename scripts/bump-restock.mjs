@@ -5,6 +5,10 @@
  *   node scripts/bump-restock.mjs --live plink_...          # +1
  *   node scripts/bump-restock.mjs --live plink_... --by=2   # +2
  *
+ * **shop.ts の restocked を上げる前に実行する。** Stripe側の上限が shop.ts と
+ * 一致しない・shop.ts と違うリンク・soldOut:true のときは何も変えずに止まる
+ * （2回目の実行で枠が二重に増えるのを防ぐ）。意図的に進めるときだけ --force。
+ *
  * 鍵は --live なら .env.local の STRIPE_SECRET_KEY_LIVE、既定は STRIPE_SECRET_KEY。
  *
  * shop.ts の `restocked` はこのスクリプトが自動で書き換えない
@@ -19,6 +23,7 @@
  */
 
 import { loadKey, loadProduct, salesCap, parseArgs } from "./_shop-config.mjs";
+import { planRestockBump } from "./_restock-plan.mjs";
 
 async function stripeGet(key, path) {
   const res = await fetch(`https://api.stripe.com/v1/${path}`, {
@@ -59,24 +64,24 @@ async function main() {
 
   const { key } = loadKey({ live: args.live });
   const shop = loadProduct(args.slug);
-  const currentCap = salesCap(shop); // shop.ts の現在値ベース
-  const newCap = currentCap + by;
-
   const before = await stripeGet(key, `payment_links/${plinkId}`);
   const beforeLimit = before.restrictions?.completed_sessions?.limit ?? null;
+  const { currentCap, newCap, error } = planRestockBump({
+    shop, plinkId, by, beforeLimit, force: args.force,
+  });
 
   console.log(`商品: ${shop.title}（${shop.slug}）`);
   console.log(`Payment Link: ${plinkId}${before.active ? "" : "（現在 inactive）"}`);
   console.log(`shop.ts現在値: edition=${shop.edition} + restocked=${shop.restocked} = ${currentCap}`);
   console.log(`Stripe側の現在の上限: ${beforeLimit}`);
-  console.log(`→ ${newCap} に更新します（+${by}）\n`);
 
-  if (beforeLimit !== currentCap) {
-    console.log(
-      `⚠ Stripe側の上限(${beforeLimit})がshop.tsから計算した現在値(${currentCap})と一致していません。` +
-        `そのまま+${by}した${newCap}に更新します。想定と違う場合はCtrl+Cで中断してください。\n`
-    );
+  // 不一致・別リンク・soldOut のときは更新せずに止める（_restock-plan.mjs 参照）
+  if (error) {
+    console.error(`\n✗ ${error}\n`);
+    process.exit(2);
   }
+  if (salesCap(shop) !== currentCap) throw new Error("salesCap の計算が食い違っています");
+  console.log(`→ ${newCap} に更新します（+${by}）\n`);
 
   const updated = await stripePost(key, `payment_links/${plinkId}`, {
     "restrictions[completed_sessions][limit]": String(newCap),
