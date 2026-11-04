@@ -77,10 +77,14 @@ export default function Contact() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-8">
             <div>
-              <label className="block text-xs tracking-[0.2em] uppercase text-neutral-400 mb-2">
+              <label
+                htmlFor="contact-name"
+                className="block text-xs tracking-[0.2em] uppercase text-neutral-400 mb-2"
+              >
                 Name
               </label>
               <input
+                id="contact-name"
                 type="text"
                 name="name"
                 required
@@ -92,10 +96,14 @@ export default function Contact() {
             </div>
 
             <div>
-              <label className="block text-xs tracking-[0.2em] uppercase text-neutral-400 mb-2">
+              <label
+                htmlFor="contact-email"
+                className="block text-xs tracking-[0.2em] uppercase text-neutral-400 mb-2"
+              >
                 Email
               </label>
               <input
+                id="contact-email"
                 type="email"
                 name="email"
                 required
@@ -107,10 +115,14 @@ export default function Contact() {
             </div>
 
             <div>
-              <label className="block text-xs tracking-[0.2em] uppercase text-neutral-400 mb-2">
+              <label
+                htmlFor="contact-message"
+                className="block text-xs tracking-[0.2em] uppercase text-neutral-400 mb-2"
+              >
                 Message
               </label>
               <textarea
+                id="contact-message"
                 name="message"
                 required
                 rows={6}
@@ -122,7 +134,7 @@ export default function Contact() {
             </div>
 
             {status === "error" && (
-              <div className="border border-neutral-300 px-4 py-4">
+              <div role="alert" className="border border-neutral-300 px-4 py-4">
                 <p className="text-sm text-neutral-700 leading-relaxed">
                   送信できませんでした。
                 </p>
