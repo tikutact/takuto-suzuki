@@ -125,6 +125,11 @@ async function main() {
   check(link.automatic_tax?.enabled !== true, "Stripe Tax が無効（税込価格で登録済み）",
     link.automatic_tax?.enabled ? "有効になっており上乗せ請求されます" : "");
 
+  // 割引コード欄が開いていると、サイト表示（¥price）より安く買える。
+  // 決済額の判定（上）は明細の定価しか見ないので、ここで別に見る。
+  check(link.allow_promotion_codes !== true, "割引コードの入力欄が無効",
+    link.allow_promotion_codes ? "有効＝表示価格より安く決済できます" : "");
+
   // --- 5. 数量固定 ---
   check(item != null && !item.adjustable_quantity?.enabled, "数量変更が不可（1固定）",
     item?.adjustable_quantity?.enabled ? "数量変更が有効＝上限を超えて売れます" : "");
@@ -168,6 +173,17 @@ async function main() {
     check(amounts.every((a) => a === product.shipping), `送料の額がサイト表示と一致（¥${product.shipping}）`,
       `Stripe側=${amounts.map((a) => `¥${a}`).join(", ")}`);
   }
+
+  // --- 9b. 決済完了画面の発送日数 ---
+  // create-payment-link.mjs が作成時に SHIPPING_DAYS を焼き込む文言。shop.ts の日数を
+  // 変えてもリンク側は古いまま残り、購入者が最後に見る約束だけがサイトと食い違う。
+  const confirmMsg = link.after_completion?.hosted_confirmation?.custom_message ?? "";
+  const daysInMsg = [...confirmMsg.matchAll(/(\d+)\s*営業日/g)].map((m) => Number(m[1]));
+  check(daysInMsg.every((d) => d === product.shippingDays),
+    `決済完了画面の発送日数がサイトと一致（${product.shippingDays}営業日）`,
+    daysInMsg.length === 0
+      ? `完了画面に日数の記載なし（type=${link.after_completion?.type ?? "?"}）`
+      : `完了画面=${daysInMsg.join(",")}営業日`);
 
   // --- 10. 販売数（サイトと同じ数え方 + Stripeが上限判定に使っている値） ---
   // 1回100件までしか返らないので最後までページ送りする。ここを1ページで止めると、
