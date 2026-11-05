@@ -24,6 +24,13 @@ html {
   to   { opacity: 1; }
 }
 
+/* ページ本文の最初のフェードイン（src/components/PageTransition.tsx）。
+   JS を待たずに CSS だけで 0 → 1 になるので、JS が無い・失敗したときも本文は見える。
+   both: 待ち時間（0.2秒）の間は 0、終わったら 1 のまま。 */
+.page-transition {
+  animation: fadeUp 1.8s ease 0.2s both;
+}
+
 /* font-family はここで指定しない。layout.tsx の <body> に付けている
    ebGaramond.className が担当する（クラスの方が特異度が高くここは元から
    効いていなかった）。CSS変数経由の指定は iOS WebKit で反映されないため、
