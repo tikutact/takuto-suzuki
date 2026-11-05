@@ -191,7 +191,11 @@ async function main() {
   const submitMsg = link.custom_text?.submit?.message ?? "";
   check(submitMsg === checkoutNotice(product),
     "決済ボタン近くに発送時期・返品条件の文がある（特商法の最終確認画面）",
-    submitMsg === "" ? "未設定＝node scripts/set-checkout-notice.mjs --live で入れる" : "文面が checkoutNotice() と違う（日数変更後の更新漏れ？）");
+    submitMsg === checkoutNotice(product)
+      ? ""
+      : submitMsg === ""
+        ? "未設定＝node scripts/set-checkout-notice.mjs --live で入れる"
+        : "文面が checkoutNotice() と違う（日数変更後の更新漏れ？）");
 
   // --- 10. 販売数（サイトと同じ数え方 + Stripeが上限判定に使っている値） ---
   // 1回100件までしか返らないので最後までページ送りする。ここを1ページで止めると、
