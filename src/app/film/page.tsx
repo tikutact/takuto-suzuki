@@ -20,9 +20,13 @@ const videos = [
   "dappled.mp4",
 ];
 
+function filmName(src: string) {
+  return src.replace(/\.mp4$/, "");
+}
+
 function VideoCell({ src, onClick }: { src: string; onClick: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -45,10 +49,14 @@ function VideoCell({ src, onClick }: { src: string; onClick: () => void }) {
   }, []);
 
   return (
-    <div
+    // キーボード（Tab → Enter/Space）でも開けるようにボタンにしている。
+    // 見た目は以前の div と同じ。フォーカスはキーボード操作時だけ枠を出す。
+    <button
+      type="button"
       ref={wrapperRef}
-      className="relative w-full aspect-video bg-black overflow-hidden cursor-pointer"
+      className="relative block w-full aspect-video bg-black overflow-hidden cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
       onClick={onClick}
+      aria-label={`Play ${filmName(src)}`}
     >
       <video
         ref={videoRef}
@@ -59,22 +67,40 @@ function VideoCell({ src, onClick }: { src: string; onClick: () => void }) {
         preload="none"
         className="w-full h-full object-cover"
       />
-    </div>
+    </button>
   );
 }
 
 function Modal({ src, onClose }: { src: string; onClose: () => void }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // 開いたら閉じるボタンへフォーカスを移し、閉じたら開く前の要素（押した動画セル）へ戻す。
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => opener?.focus();
+  }, []);
 
   useEffect(() => {
     ref.current?.play().catch(() => {});
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      // モーダル内で操作できるのは閉じるボタンだけなので、Tab で背後のページへ抜けないようにする。
+      if (e.key === "Tab") {
+        e.preventDefault();
+        closeRef.current?.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   return createPortal(
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={filmName(src)}
       onClick={onClose}
       style={{
         position: "fixed",
@@ -88,7 +114,10 @@ function Modal({ src, onClose }: { src: string; onClose: () => void }) {
       }}
     >
       <button
+        ref={closeRef}
+        type="button"
         onClick={onClose}
+        aria-label="Close"
         style={{
           position: "absolute",
           top: "1.25rem",

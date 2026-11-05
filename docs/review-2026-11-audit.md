@@ -56,7 +56,11 @@
 
 ---
 
-## 2. 条件付きで壊れるもの・軽微なもの（未修正）
+## 2. 条件付きで壊れるもの・軽微なもの
+
+> **2026-11-05 追補**: 2-9・2-10・2-12〜2-17 を作業ブランチ `claude/audit-followups-rj8iyn`（PR #15）で修正した。
+> 各項目末尾の「→ 修正済み」に内容とコミットを書いた。行番号は修正前（main = `367fdb2`）時点。
+> 2-13 は報告時の `:106-114` からずれており、実際は `src/components/Nav.tsx:143-182`（モバイル側のメニュー）だった。
 
 ### Shop / Stripe
 - **2-1. サイトは Stripe の「上限値」を見ていない**（`src/lib/stripe.ts:98`、`src/lib/sale-status.ts:30`）。
@@ -85,24 +89,47 @@
   `/film`・`/contact`・`/` は `"use client"` のページなので metadata を出すには構成変更（サーバーの page/layout で包む）が要り、文言も作者が決めるべきなので見送り。
   あわせて canonical がどのページにも無い（apex/www の扱いは Vercel 側の転送次第）。
 - **2-9. `/tokushoho` の OGP は既定値を継承**（`title` だけ上書き）。共有すると「TAKUTO SUZUKI — Photographer」で出る。軽微。
+  → **修正済み（`04defde`）**: og/twitter の title・description をページの既存 title/description（見出し「特定商取引法に基づく表記」）に。
+  openGraph はページで書くと layout の値が**丸ごと置き換わる**（Next の metadata は入れ子を浅くマージしない）ので、siteName/locale/type/画像も明示。build 後の HTML で確認。
 - **2-10. robots.txt が無い**（`/robots.txt` は 404 を実測）。クロールは妨げないが、sitemap の場所を検索エンジンに伝える手段が Search Console だけ。
+  → **修正済み（`4da631e`）**: `src/app/robots.ts`。`Allow: /` と `Sitemap: https://www.takutosuzuki.com/sitemap.xml`。
+  noindex の `/journal` は Disallow に**しない**（塞ぐとクローラーが noindex を読めない）。sitemap の中身（公開8 URL、Journal・下書きなし）と下書き記事の 404 は変化なしを実測。
 - **2-11. トップのスライドショー**（`src/app/page.tsx`）
   - alt が「Photo 1」〜「Photo 4」（`:7-17`）で内容を表さない。
   - 4秒ごとに自動で切り替わり停止手段が無い（`:24`）。`prefers-reduced-motion` も見ていない（WCAG 2.2.2）。
   - `fill` で `sizes` 未指定のため既定の `100vw` 扱い。スマホでは 65% 幅、PC では 60vw 幅なので、必要より大きい画像を取りに行く。
     さらに `priority` がモバイル用・PC 用の両方の1枚目に付いているので、**どちらの端末でも使わない側の1枚目を preload する**。
 - **2-12. `/works` の一覧で全カバーに `priority`**（`src/app/works/page.tsx:26`）。現在2シリーズなので影響は小さいが、増えるほど初期読み込みが重くなる。`sizes` も未指定。
+  → **修正済み（`8477da7`）**: 先読みは1枚目だけ。Next 16 で `priority` は非推奨なので `preload={i === 0}` に。`sizes="(min-width: 768px) 54vw, 90vw"`。
+  HTML で preload が1件・`imageSizes` 付き、2枚目は `loading="lazy"` になったことを確認。見た目は不変（2枚目は先読みされないだけで、画面内なら通常どおり読み込まれる）。
+  ほかのページ（`/`・`/works/[slug]`・`/shop`）にも `priority` が残っている（非推奨だが動作する）。今回は範囲外。
 - **2-13. モバイルメニュー**（`src/components/Nav.tsx:106-114`）: 閉じている間も `max-h-0 overflow-hidden` で隠しているだけなので、
   Tab キー／スクリーンリーダーで見えないリンクにフォーカスが移る。トグルボタンに `aria-expanded` が無い。
+  → **修正済み（`46f5c0a`）**: 開閉の器に `inert={!menuOpen}`、トグルに `aria-expanded`・`aria-controls`。inert は描画に影響しないので開閉アニメーションは同じ。
+  390px 幅の Chromium で、閉じている間は Tab が「ロゴ → トグル」だけを回り、開くと Works/Film/Shop… に入ることを確認。
 - **2-14. Film ページ**（`src/app/film/page.tsx`）: 動画セルが `div onClick`（`:51`）でキーボード操作できない。モーダルに `role="dialog"`・フォーカス移動が無く、
   閉じるボタンは「✕」だけ（`:105`、`aria-label` なし）。
+  → **修正済み（`366c1f9`）**: セルを `<button>`（`aria-label="Play trees"` 等）に。モーダルに `role="dialog"`・`aria-modal`・`aria-label`、
+  開くと閉じるボタン（`aria-label="Close"`）へフォーカス、Tab で背後へ抜けない、Esc／背景クリックで閉じる、閉じたら押したセルへフォーカスを戻す。
+  Chromium で Tab→Enter／Space で開閉できることを確認。**見た目の違い**: キーボード操作でフォーカスしたセルに黒い枠（`focus-visible`）が出る。マウス操作では変化なし。
 - **2-15. ページ全体が JS 実行まで不可視**（`src/components/PageTransition.tsx:28` の `style={{ opacity: 0 }}`）。JS が失敗・無効だと本文が見えない
   （特商法ページも含む）。`prefers-reduced-motion` も未対応。
+  → **修正済み（`ba2fd59`）**: 最初のフェード（0.2秒待って1.8秒・ease）を CSS アニメーション `.page-transition`（`globals.css`）に移し、
+  クライアント遷移時の1.2秒フェードだけ JS（`PageTransition.tsx`）に残した。JS 無効の Chromium でも opacity が 0（100ms）→0.58（900ms）→1（2.6秒）になり本文が見える。
+  **見た目の違い**: 曲線・時間は同じ。開始の基準が「JS の実行（hydration）後」から「最初の描画」に変わるので、回線が遅い時はフェードが少し早く始まる。
+  `prefers-reduced-motion` は見た目の判断が要るので未対応のまま（4-11）。
 - **2-16. `X-Powered-By: Next.js` が出ている**（実測）。`poweredByHeader: false` で消せる。CSP・HSTS は next.config では未設定
   （HSTS は Vercel が独自ドメインに付けるはずだが未確認）。
+  → **X-Powered-By は修正済み（`92c9870`）**: `poweredByHeader: false`。`/`・`/shop` で消えたこと、既存の4ヘッダーが残ることを実測。CSP・HSTS は足していない（4-12）。
 - **2-17. 未使用ファイル**: `src/components/Footer.tsx`（どこからも import されていない）、`public/{file,globe,next,vercel,window}.svg`（create-next-app の残り）。
   README も create-next-app のまま。
+  → **修正済み（`b10233d`）**: 6ファイルを削除。`src`・`scripts`・`public`・`docs`・設定ファイルを grep し、参照はこの報告書だけだった。build 成功・`/next.svg` は 404。README は未変更。
 - **2-18. 依存**: `npm audit --omit=dev` は 0 件。dev 依存に moderate（ESLint 経由の `minimatch`）があるが、本番には載らない。
+- **2-19.（新規・未修正）ページで `openGraph` を書くと layout の siteName/locale/type が落ちる**: `src/app/layout.tsx:36-38` のコメントは
+  「images だけ書けば title/description/siteName/locale/type は継承される」としているが、Next の docs（`generate-metadata.md`「Overwriting fields」）では
+  入れ子のフィールドは丸ごと置き換わる。実測で `/shop` の HTML に `og:site_name`・`og:locale`・`og:type` が出ていない（`src/app/shop/page.tsx:32-37`）。
+  `src/app/journal/[slug]/page.tsx:26` も `openGraph: { images }` だけなので、記事を公開すると title/description まで落ちる（今は全記事 draft なので影響なし）。
+  共有時の見え方は概ね保たれる（og:title 等は出ている）ので軽微。shop の metadata は範囲外として触っていない。
 
 ---
 
@@ -144,6 +171,9 @@
 8. **Vercel 本番の環境変数**: `STRIPE_SECRET_KEY` が本番キー（読み取り専用の制限付きキー推奨）で入っているか。Vercel のランタイムログに `[shop]` で始まるエラーが出ていないか。
 9. **（2-8）各ページの title / description の文言**を決めてもらえれば、構成変更込みで対応できる。
 10. **決済手段**: 作成スクリプトは `card` と `link`（Stripe のカード保存ウォレット）で作る。特商法ページの「クレジットカード決済（Stripe）」の表記で足りるか。
+11. **（2-15）`prefers-reduced-motion` のときフェードを止めるか**。止めるなら `.page-transition` と JS の animate を両方外す小さな変更。
+12. **（2-16）CSP・HSTS を next.config で足すか**。CSP は Formspree・Stripe・JSON-LD のインライン script に影響するので、入れるなら Report-Only から。HSTS は Vercel 側で付いているかを本番の応答ヘッダーで確認してから。
+13. **（2-19）layout.tsx の openGraph コメントの誤りを直し、`/shop`・Journal 記事に siteName/locale/type を足すか**。
 
 ---
 
@@ -160,4 +190,7 @@
 | `npm audit --omit=dev` | 0 件（dev 依存に moderate 1系統） |
 | ビルド成果物の秘密値 grep / 画像 EXIF の GPS 走査 / 参照アセットの存在確認 | 問題なし |
 | `scripts/check-payment-link.mjs`・`create-payment-link.mjs`・`bump-restock.mjs` の実行 | **未実行**（Stripe の鍵を渡されておらず、本番・テストとも外部サービスに接続しない方針のため）。`node --check` での構文確認のみ |
+| **追補（2026-11-05、PR #15）** 各修正コミットごとに `npx tsc --noEmit`・`npm run lint`・`npm test`・`npm run build` | 全コミットでエラー0・テスト12件成功・build 成功 |
+| 追補: `next start` + curl | `X-Powered-By` なし／`/robots.txt` 200・内容確認／sitemap 8 URL（Journal なし）／下書き 404／`/works` の preload 1件／`/tokushoho` の og・twitter／全公開ページ 200・`/works/cast` 308・`/next.svg` 404 |
+| 追補: Playwright（同梱の Chromium、ローカルの `next start` のみ） | Film のキーボード開閉・フォーカス移動と復帰、モバイルメニューの Tab 順（390px）、JS 無効時の本文の opacity、クライアント遷移時のフェード |
 | 実機・ブラウザでのスマホ表示確認 | 未実施（コードから読める範囲のみ。2-11・2-13・2-14 はコード上の指摘） |
