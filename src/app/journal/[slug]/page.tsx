@@ -20,10 +20,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = getPost(slug);
   if (!post) return {};
 
+  const title = `${post.title} — Takuto Suzuki`;
+  const description = post.excerpt ?? undefined;
+
+  // openGraph はページで書くと layout.tsx の値が丸ごと置き換わる（images だけ書くと
+  // title/description/siteName/locale/type が落ちる）。カバーがある記事だけ og/twitter の全項目を書き、
+  // 無い記事は従来どおり layout の既定値を使う。
   return {
-    title: `${post.title} — Takuto Suzuki`,
-    description: post.excerpt ?? undefined,
-    openGraph: post.cover ? { images: [post.cover] } : undefined,
+    title,
+    description,
+    openGraph: post.cover
+      ? {
+          title,
+          description,
+          siteName: "TAKUTO SUZUKI",
+          locale: "ja_JP",
+          type: "website",
+          images: [post.cover],
+        }
+      : undefined,
+    // twitter も同じ理由で、書かないと layout の既定（サイト名・既定画像）のままになり og と食い違う。
+    twitter: post.cover
+      ? { card: "summary_large_image", title, description, images: [post.cover] }
+      : undefined,
   };
 }
 
