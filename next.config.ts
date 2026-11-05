@@ -11,6 +11,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // 応答に X-Powered-By: Next.js を付けない（使っているフレームワークを外に出さない）。
+  poweredByHeader: false,
   // /shop の商品写真は本の紙面そのものを見せるので、既定の q=75 より上げている。
   //
   // Next 16 で images.qualities の既定が「全部許可」から [75] だけに変わった。
