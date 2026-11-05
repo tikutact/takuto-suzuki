@@ -8,6 +8,12 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=()",
   },
+  // HTTPS 以外で開かせない（2年）。この値はこのホスト（www.takutosuzuki.com）だけに効き、
+  // 購入ボタンの遷移先 buy.stripe.com・Formspree など他のホストには影響しない。
+  // includeSubDomains / preload は付けていない: 付けると takutosuzuki.com の全サブドメインが
+  // 2年間 HTTPS 必須になり、後から外せない。付けるなら全サブドメインの HTTPS 化を確認してから。
+  { key: "Strict-Transport-Security", value: "max-age=63072000" },
+  // CSP は未設定。入れるときの許可先の洗い出しは docs/review-2026-11-audit.md 4-12。
 ];
 
 const nextConfig: NextConfig = {

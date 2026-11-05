@@ -31,6 +31,19 @@ html {
   animation: fadeUp 1.8s ease 0.2s both;
 }
 
+/* OS の「視差効果を減らす」（prefers-reduced-motion: reduce）の人には、フェードと
+   スムーズスクロールを止めて最初から表示する。通常の人の見た目は変えない。
+   クライアント遷移のフェード（PageTransition.tsx）・スライドショー（page.tsx）・
+   メニュー（Nav.tsx）・一覧のホバー拡大は各コンポーネントの motion-reduce: で止めている。 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .page-transition {
+    animation: none;
+  }
+}
+
 /* font-family はここで指定しない。layout.tsx の <body> に付けている
    ebGaramond.className が担当する（クラスの方が特異度が高くここは元から
    効いていなかった）。CSS変数経由の指定は iOS WebKit で反映されないため、

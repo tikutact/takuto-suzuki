@@ -51,7 +51,7 @@ export default function Journal() {
                     src={post.cover}
                     alt={post.title}
                     fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                    className="object-cover transition-transform duration-700 group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                   />
                 </div>
               )}

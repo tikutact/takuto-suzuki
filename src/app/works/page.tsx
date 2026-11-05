@@ -27,7 +27,7 @@ export default function Works() {
                   preload={i === 0}
                   // 表示幅: スマホ (100vw - 2rem) の 90%、md 以上は (60vw - 2rem) の 90%。
                   sizes="(min-width: 768px) 54vw, 90vw"
-                  className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                 />
               )}
             </div>

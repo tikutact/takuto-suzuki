@@ -17,6 +17,8 @@ export default function PageTransition({ children }: { children: React.ReactNode
   useEffect(() => {
     if (prevPathname.current === pathname) return; // 初回は CSS 側がフェードする
     prevPathname.current = pathname;
+    // 「視差効果を減らす」の人にはフェードせずそのまま表示する（初回は globals.css 側で止めている）
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     ref.current?.animate([{ opacity: "0" }, { opacity: "1" }], {
       duration: 1200,

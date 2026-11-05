@@ -61,6 +61,10 @@
 > **2026-11-05 追補**: 2-9・2-10・2-12〜2-17 を作業ブランチ `claude/audit-followups-rj8iyn`（PR #15）で修正した。
 > 各項目末尾の「→ 修正済み」に内容とコミットを書いた。行番号は修正前（main = `367fdb2`）時点。
 > 2-13 は報告時の `:106-114` からずれており、実際は `src/components/Nav.tsx:143-182`（モバイル側のメニュー）だった。
+>
+> **2026-11-05 追補（3周目）**: 2-11（動きの部分）・2-12 の残り・2-15 の reduced-motion・2-16 の HSTS・2-19 を
+> 作業ブランチ `fix/audit-followups-2` で修正した。各項目末尾の「→ 修正済み（3周目）」に書いた。2-20・2-21 は新規。
+> 行番号の確認: 未修正項目の行は main（`69b07fc`）で読み直し、ずれていたのは 2-19 の `src/app/shop/page.tsx:32-37`（実際は `:32-36`）程度で、内容は報告どおりだった。
 
 ### Shop / Stripe
 - **2-1. サイトは Stripe の「上限値」を見ていない**（`src/lib/stripe.ts:98`、`src/lib/sale-status.ts:30`）。
@@ -99,10 +103,16 @@
   - 4秒ごとに自動で切り替わり停止手段が無い（`:24`）。`prefers-reduced-motion` も見ていない（WCAG 2.2.2）。
   - `fill` で `sizes` 未指定のため既定の `100vw` 扱い。スマホでは 65% 幅、PC では 60vw 幅なので、必要より大きい画像を取りに行く。
     さらに `priority` がモバイル用・PC 用の両方の1枚目に付いているので、**どちらの端末でも使わない側の1枚目を preload する**。
+  → **動きの部分だけ修正済み（3周目、`ca2e0e3`）**: 「視差効果を減らす」設定の人には 1秒のクロスフェードをやめて即時に切り替える
+  （`motion-reduce:transition-none`、`src/app/page.tsx:41,56`）。4秒ごとの切り替え自体は残した（止めると3枚が見えなくなるので見せ方の判断＝4-15）。
+  通常設定の見た目は不変（計算後の `transition: opacity 1s` が修正前と同じことを Playwright で確認）。
+  `priority` は同じ出力の `preload` に置き換えた（`330a3ea`）。alt・`sizes`・両端末の1枚目の preload・一時停止ボタンは未対応（4-15）。
 - **2-12. `/works` の一覧で全カバーに `priority`**（`src/app/works/page.tsx:26`）。現在2シリーズなので影響は小さいが、増えるほど初期読み込みが重くなる。`sizes` も未指定。
   → **修正済み（`8477da7`）**: 先読みは1枚目だけ。Next 16 で `priority` は非推奨なので `preload={i === 0}` に。`sizes="(min-width: 768px) 54vw, 90vw"`。
   HTML で preload が1件・`imageSizes` 付き、2枚目は `loading="lazy"` になったことを確認。見た目は不変（2枚目は先読みされないだけで、画面内なら通常どおり読み込まれる）。
   ほかのページ（`/`・`/works/[slug]`・`/shop`）にも `priority` が残っている（非推奨だが動作する）。今回は範囲外。
+  → **修正済み（3周目、`330a3ea`）**: 3ページの `priority` を `preload` に。Next 16 の `get-img-props.js` は `preload || priority` で同じ扱い
+  （遅延読み込みの判定も同じ）。置き換え前後で `/`・`/shop`・`/works/2026`・`/works/fade-stay` の `<img>` と preload の `<link>`（58行）が完全に一致。
 - **2-13. モバイルメニュー**（`src/components/Nav.tsx:106-114`）: 閉じている間も `max-h-0 overflow-hidden` で隠しているだけなので、
   Tab キー／スクリーンリーダーで見えないリンクにフォーカスが移る。トグルボタンに `aria-expanded` が無い。
   → **修正済み（`46f5c0a`）**: 開閉の器に `inert={!menuOpen}`、トグルに `aria-expanded`・`aria-controls`。inert は描画に影響しないので開閉アニメーションは同じ。
@@ -118,9 +128,18 @@
   クライアント遷移時の1.2秒フェードだけ JS（`PageTransition.tsx`）に残した。JS 無効の Chromium でも opacity が 0（100ms）→0.58（900ms）→1（2.6秒）になり本文が見える。
   **見た目の違い**: 曲線・時間は同じ。開始の基準が「JS の実行（hydration）後」から「最初の描画」に変わるので、回線が遅い時はフェードが少し早く始まる。
   `prefers-reduced-motion` は見た目の判断が要るので未対応のまま（4-11）。
+  → **reduced-motion も修正済み（3周目、`ca2e0e3`）**: `prefers-reduced-motion: reduce` のときだけ、最初のフェード（`globals.css` の `@media`）と
+  クライアント遷移の 1.2秒フェード（`PageTransition.tsx` で `matchMedia` を見て animate しない）を止め、最初から表示する。
+  同じ設定のときだけ `html` のスムーズスクロール、モバイルメニューの開閉・ハンバーガーの変形（`Nav.tsx`）、`/works`・`/journal` のホバー拡大も止めた。
+  Playwright（`reducedMotion: "reduce"`）で: 表示 100ms 後の opacity が 0→**1**、遷移 300ms 後が 0.35→**1**、各 `transition-property` が `none`、ホバー時の scale が 1.02→**1**。
+  `no-preference` では全項目が修正前と同じ値。
 - **2-16. `X-Powered-By: Next.js` が出ている**（実測）。`poweredByHeader: false` で消せる。CSP・HSTS は next.config では未設定
   （HSTS は Vercel が独自ドメインに付けるはずだが未確認）。
   → **X-Powered-By は修正済み（`92c9870`）**: `poweredByHeader: false`。`/`・`/shop` で消えたこと、既存の4ヘッダーが残ることを実測。CSP・HSTS は足していない（4-12）。
+  → **HSTS は修正済み（3周目、`f0bc498`）**: `Strict-Transport-Security: max-age=63072000`（`next.config.ts:16`）。`includeSubDomains`・`preload` は付けていない
+  （付けると takutosuzuki.com の全サブドメインが2年 HTTPS 必須になり後から外せない＝4-16）。このホストにだけ効くので、購入ボタンの遷移先 `buy.stripe.com`・
+  Formspree への送信には影響しない。`next start` で公開ページ・`/robots.txt`・`/sitemap.xml`・画像・404 の全部に5ヘッダーが付くことを確認。
+  `X-Content-Type-Options`・`Referrer-Policy`・`Permissions-Policy` は**前から付いている**（3章）ので足していない。CSP は入れていない（下書きは 4-12）。
 - **2-17. 未使用ファイル**: `src/components/Footer.tsx`（どこからも import されていない）、`public/{file,globe,next,vercel,window}.svg`（create-next-app の残り）。
   README も create-next-app のまま。
   → **修正済み（`b10233d`）**: 6ファイルを削除。`src`・`scripts`・`public`・`docs`・設定ファイルを grep し、参照はこの報告書だけだった。build 成功・`/next.svg` は 404。README は未変更。
@@ -130,6 +149,15 @@
   入れ子のフィールドは丸ごと置き換わる。実測で `/shop` の HTML に `og:site_name`・`og:locale`・`og:type` が出ていない（`src/app/shop/page.tsx:32-37`）。
   `src/app/journal/[slug]/page.tsx:26` も `openGraph: { images }` だけなので、記事を公開すると title/description まで落ちる（今は全記事 draft なので影響なし）。
   共有時の見え方は概ね保たれる（og:title 等は出ている）ので軽微。shop の metadata は範囲外として触っていない。
+  → **修正済み（3周目）**: `/shop` は `/tokushoho` と同じく openGraph に siteName/locale/type を明示し、`layout.tsx` の誤ったコメントを直した（`970312d`）。
+  文言は既存の title「Shop — TAKUTO SUZUKI」と description のまま。build 後の `/shop` に `og:site_name`・`og:locale`・`og:type` が出ることを確認（修正前は無し）。
+  Journal 記事は**カバーのある記事だけ** og/twitter の全項目を書くようにした（`236bf9c`。無い記事は従来どおり layout の既定）。
+  下書きの `sample-field-note` を作業ツリーで一時的に公開扱いにして build し、og・twitter とも記事の title/description/カバー画像になることを確認（コミットはしていない。戻した後は 404）。
+- **2-20.（新規・未修正）Film ページの動画は「視差効果を減らす」設定でも自動再生する**（`src/app/film/page.tsx:36-44` の IntersectionObserver が画面内で `play()`）。
+  12本のループ動画が動く。止めると `preload="none"` で poster も無いため**黒い枠が並ぶだけ**になるので、poster 画像を用意するか等の判断が要る（4-14）。
+  クリック後のモーダル再生は本人の操作なので問題なし。
+- **2-21.（新規・軽微）`/works/cast` などの 308 転送の応答にはセキュリティヘッダーが付かない**（`next start` で実測、`next.config.ts` の `headers()` が redirects の応答に掛からない）。
+  本文の無い同一ホスト内の転送なので実害はない。
 
 ---
 
@@ -152,6 +180,12 @@
 - **Next.js 16 の書き方**: `node_modules/next/dist/docs` で確認。Cache Components 無効の構成なので `export const revalidate = 60` は有効（有効化すると削除が必要になる点だけ注意）。
   `params` を `Promise` で受けて `await` している書き方も現行仕様どおり。
 - **セキュリティヘッダー**: X-Frame-Options・nosniff・Referrer-Policy・Permissions-Policy は全パスに付いている（実測）。
+- **（3周目）既存ヘッダーと Stripe・外部サービスの関係**: Purchase ボタン（`/shop`）は `buy.stripe.com` への普通の `<a href>`（`target` なし）で、iframe・Stripe.js・
+  Payment Request API は使っていない。なので `Permissions-Policy`（camera/microphone/geolocation のみ禁止）・`X-Frame-Options: SAMEORIGIN` は決済に関係しない。
+  `Referrer-Policy: strict-origin-when-cross-origin` で Stripe に渡るのはオリジンだけ（Payment Link はリファラーを使わない）。
+  **GA4・Vercel Analytics/Speed Insights はコードにも build 結果にも入っていない**（`gtag`・`googletagmanager`・`@vercel/*` が0件、`package.json` にも無し）。
+- **（3周目）未使用コード**: `src/lib`・`src/components` の export を全部 grep。外から使われていないのは同じファイル内で使っている型
+  （`JournalBlock`・`BreadcrumbItem`・`Series`）だけで、消すものは無かった。外部リンク（Instagram）の `target="_blank"` には `rel="noopener noreferrer"` が付いている。
 
 ---
 
@@ -172,8 +206,41 @@
 9. **（2-8）各ページの title / description の文言**を決めてもらえれば、構成変更込みで対応できる。
 10. **決済手段**: 作成スクリプトは `card` と `link`（Stripe のカード保存ウォレット）で作る。特商法ページの「クレジットカード決済（Stripe）」の表記で足りるか。
 11. **（2-15）`prefers-reduced-motion` のときフェードを止めるか**。止めるなら `.page-transition` と JS の animate を両方外す小さな変更。
+    → **3周目で対応（`ca2e0e3`）**: 止めて最初から表示する方にした。iPhone なら「設定 → アクセシビリティ → 動作 → 視差効果を減らす」を ON にして見え方を一度確認してほしい。
 12. **（2-16）CSP・HSTS を next.config で足すか**。CSP は Formspree・Stripe・JSON-LD のインライン script に影響するので、入れるなら Report-Only から。HSTS は Vercel 側で付いているかを本番の応答ヘッダーで確認してから。
+    → **3周目**: HSTS は `max-age=63072000` だけ足した（`f0bc498`。Vercel も既定で同じ値を付けるはずで、重なっても害はない。本番で `curl -sI https://www.takutosuzuki.com/` を見て1本だけ出ているか確認してほしい）。
+    CSP は入れていない。入れる場合の**下書き**（コードと `.next` の build 結果・`next start` の HTML から洗い出した。2026-11-05 時点）:
+
+    | 読み込み・通信 | どこで | CSP で要るもの |
+    |---|---|---|
+    | Next の JS（`/_next/static/chunks/*`） | 全ページ | `script-src 'self'` |
+    | Next のインライン script（RSC ペイロード `self.__next_f.push`、`<script id="_R_">` など、1ページに2〜3本） | 全ページ | `'unsafe-inline'`、または nonce（**全ページを動的レンダリングにする必要があり、静的生成・`/shop` の ISR をやめることになる**）、または実験的な SRI（`experimental.sri`） |
+    | JSON-LD（`<script type="application/ld+json">`、1ページ最大3本） | 全ページ | 実行されないデータなので CSP の対象外（以前の「JSON-LD に影響」は訂正） |
+    | `style="..."` 属性（next/image の配置、Film のモーダル）・Next/Tailwind のインライン style | `/`・`/shop`・`/works`・`/film` など | `style-src 'self' 'unsafe-inline'` |
+    | 画像（`/images`・`/og`・`/_next/image`）。外部の画像配信元は無し（`images.remotePatterns` 未設定） | 全ページ | `img-src 'self'`。将来 `placeholder="blur"` を使うなら `data:` も |
+    | フォント（同梱の woff2） | 全ページ | `font-src 'self'` |
+    | 動画（`/film/*.mp4`） | `/film` | `media-src 'self'` |
+    | お問い合わせの送信 `fetch("https://formspree.io/f/…")` | `/contact` | `connect-src 'self' https://formspree.io` |
+    | 購入ボタン → `https://buy.stripe.com/…`、Instagram へのリンク | `/shop`、Nav | 普通のリンク遷移なので CSP では制限されない（`form-action` も無関係。フォームの送信は fetch） |
+    | Stripe API（`api.stripe.com`） | `src/lib/stripe.ts`（サーバー側のみ） | ブラウザは通信しないので不要 |
+    | Vercel のプレビュー用ツールバー（プレビューデプロイのみ） | Vercel が挿入 | 本番のみに CSP を掛けるなら不要。プレビューにも掛けるなら `script-src`/`connect-src`/`frame-src` に `https://vercel.live` 等 |
+    | GA4・Vercel Analytics | **今は入っていない** | 入れるなら GA4: `script-src https://www.googletagmanager.com`、`connect-src`/`img-src https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com`。Vercel Analytics: 同一オリジンの `/_vercel/insights/*` なので `'self'` で足りる |
+    | iframe 埋め込み | 無し | `frame-src 'none'`、`frame-ancestors 'self'`（今の X-Frame-Options と同じ意味） |
+
+    たたき台（**まず `Content-Security-Policy-Report-Only` で**本番に出し、ブラウザのコンソールに違反が出ないかを見てから本適用）:
+    ```
+    default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:;
+    font-src 'self'; media-src 'self'; connect-src 'self' https://formspree.io; frame-src 'none'; frame-ancestors 'self';
+    object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
+    ```
+    `'unsafe-inline'` を含むので XSS 対策としての効き目は限定的（主な効果は外部読み込み先の固定・`frame-ancestors`・`object-src`・`base-uri`）。
+    `next dev` では `'unsafe-eval'` も要る（Next の docs）。
 13. **（2-19）layout.tsx の openGraph コメントの誤りを直し、`/shop`・Journal 記事に siteName/locale/type を足すか**。
+    → **3周目で対応（`970312d`・`236bf9c`）**。
+14. **（2-20）Film ページの動画を「視差効果を減らす」設定で止めるか**。止めるなら各動画の poster 画像（静止画）を用意するか、最初のフレームを見せる方法を決める必要がある。
+15. **（2-11）トップのスライドショーの残り**: 一時停止ボタンを付けるか（WCAG 2.2.2。reduced-motion とは別に、誰でも止められる手段）、
+    reduced-motion の人には自動切り替え自体を止めて1枚目だけにするか（今は即時切り替えで4枚とも見せている）、alt の文言、`sizes`（画像の解像度が変わるので見た目の確認込み）。
+16. **（2-16）HSTS に `includeSubDomains`・`preload` を足すか**。takutosuzuki.com のサブドメイン（メール・他サービス用の CNAME など）が全部 HTTPS で動くと確認できてから。preload は外すのに数か月かかる。
 
 ---
 
@@ -194,3 +261,9 @@
 | 追補: `next start` + curl | `X-Powered-By` なし／`/robots.txt` 200・内容確認／sitemap 8 URL（Journal なし）／下書き 404／`/works` の preload 1件／`/tokushoho` の og・twitter／全公開ページ 200・`/works/cast` 308・`/next.svg` 404 |
 | 追補: Playwright（同梱の Chromium、ローカルの `next start` のみ） | Film のキーボード開閉・フォーカス移動と復帰、モバイルメニューの Tab 順（390px）、JS 無効時の本文の opacity、クライアント遷移時のフェード |
 | 実機・ブラウザでのスマホ表示確認 | 未実施（コードから読める範囲のみ。2-11・2-13・2-14 はコード上の指摘） |
+| **追補（2026-11-05、3周目 `fix/audit-followups-2`）** 修正前と各修正コミットごとに `npx tsc --noEmit`・`npm run lint`・`npm test`・`npm run build` | 全コミットでエラー0・テスト12件成功・build 成功 |
+| 3周目: `next start` + curl | `/shop` の og（site_name/locale/type が追加、title/description/画像は不変）・twitter／`/tokushoho` の og・twitter（12タグ、不変）／公開ページ・robots・sitemap・画像・404 の全部に5ヘッダー（HSTS 含む）／`/works/cast` 308 |
+| 3周目: 一時的に下書きを公開扱いにした build | `/journal/sample-field-note` の og・twitter（確認後に元へ戻し、404 を確認） |
+| 3周目: Playwright（`reducedMotion: "reduce"` と `"no-preference"`、1280px と 390px） | 修正前は両設定で同じ値（reduce が効いていない）→ 修正後は reduce だけ動きが止まり、no-preference は修正前と同じ値 |
+| 3周目: `priority`→`preload` の前後で4ページの `<img>`・preload `<link>` を diff | 完全一致 |
+| 本番サイトの応答ヘッダー（Vercel の HSTS の有無） | **未確認**（外部サービスに接続しない方針のため。4-12） |
