@@ -84,7 +84,7 @@ export default async function WorksSeriesPage({ params }: Props) {
                 alt={`${series.title}, ${i + 1}`}
                 width={cfg.width}
                 height={cfg.height}
-                priority={i === 0}
+                preload={i === 0}
                 className={cfg.image}
               />
             </div>

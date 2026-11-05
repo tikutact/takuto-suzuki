@@ -82,7 +82,7 @@ export default async function Shop() {
                     src={product.images[0].src}
                     alt={product.images[0].alt}
                     fill
-                    priority
+                    preload
                     sizes="(min-width: 1280px) calc((min(896px, 60vw) - 96px) * 5 / 11), (min-width: 768px) min(420px, calc(min(896px, 60vw) - 48px)), min(420px, calc(100vw - 48px))"
                     quality={90}
                     className="object-cover"
