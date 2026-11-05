@@ -108,9 +108,9 @@ export default function Nav() {
             aria-controls="mobile-menu"
             className="flex flex-col gap-1.5 p-2"
           >
-            <span className={`block w-5 h-px bg-black transition-all duration-200 ${menuOpen ? "translate-y-2 rotate-45" : ""}`} />
-            <span className={`block w-5 h-px bg-black transition-all duration-200 ${menuOpen ? "opacity-0" : ""}`} />
-            <span className={`block w-5 h-px bg-black transition-all duration-200 ${menuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
+            <span className={`block w-5 h-px bg-black transition-all duration-200 motion-reduce:transition-none ${menuOpen ? "translate-y-2 rotate-45" : ""}`} />
+            <span className={`block w-5 h-px bg-black transition-all duration-200 motion-reduce:transition-none ${menuOpen ? "opacity-0" : ""}`} />
+            <span className={`block w-5 h-px bg-black transition-all duration-200 motion-reduce:transition-none ${menuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
           </button>
         </div>
         {/* 閉じている間は高さ0で隠すだけなので、inert で中のリンクを Tab・読み上げの対象から外す。
@@ -118,7 +118,7 @@ export default function Nav() {
         <div
           id="mobile-menu"
           inert={!menuOpen}
-          className={`overflow-hidden transition-all duration-300 ${menuOpen ? "max-h-96 border-t border-neutral-100" : "max-h-0"}`}
+          className={`overflow-hidden transition-all duration-300 motion-reduce:transition-none ${menuOpen ? "max-h-96 border-t border-neutral-100" : "max-h-0"}`}
         >
           <ul className="px-6 py-5 flex flex-col gap-4">
             {links.map(({ href, label }) => (

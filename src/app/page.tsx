@@ -38,7 +38,7 @@ export default function Home() {
             alt={slide.alt}
             fill
             priority={i === 0}
-            className={`object-cover transition-opacity duration-1000 ${
+            className={`object-cover transition-opacity duration-1000 motion-reduce:transition-none ${
               i === active ? "opacity-100" : "opacity-0"
             }`}
           />
@@ -53,7 +53,7 @@ export default function Home() {
             alt={slide.alt}
             fill
             priority={i === 0}
-            className={`object-cover transition-opacity duration-1000 ${
+            className={`object-cover transition-opacity duration-1000 motion-reduce:transition-none ${
               i === active ? "opacity-100" : "opacity-0"
             }`}
           />
