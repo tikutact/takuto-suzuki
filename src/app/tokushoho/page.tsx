@@ -9,9 +9,28 @@ import {
 } from "@/lib/shop";
 import { CONTACT_EMAIL, mailtoWithSubject } from "@/lib/structured-data";
 
+const title = "特定商取引法に基づく表記 — TAKUTO SUZUKI";
+const description = "特定商取引法に基づく表記";
+
 export const metadata: Metadata = {
-  title: "特定商取引法に基づく表記 — TAKUTO SUZUKI",
-  description: "特定商取引法に基づく表記",
+  title,
+  description,
+  // openGraph/twitter はページで書くと layout.tsx の値が**丸ごと置き換わる**（項目ごとの
+  // 継承はされない）。siteName/locale/type/画像も落ちないよう、ここに全部書いている。
+  openGraph: {
+    title,
+    description,
+    siteName: "TAKUTO SUZUKI",
+    locale: "ja_JP",
+    type: "website",
+    images: [{ url: "/og/default.jpg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/og/default.jpg"],
+  },
   // sitemap/Navには載せず/shopからのリンクのみ
 };
 
