@@ -29,9 +29,14 @@ const description = featured
 export const metadata: Metadata = {
   title: "Shop — TAKUTO SUZUKI",
   description,
+  // openGraph/twitter はページで書くと layout.tsx の値が**丸ごと置き換わる**（項目ごとの
+  // 継承はされない）。siteName/locale/type も落ちないよう、ここに全部書いている。
   openGraph: {
     title: "Shop — TAKUTO SUZUKI",
     description,
+    siteName: "TAKUTO SUZUKI",
+    locale: "ja_JP",
+    type: "website",
     images: [{ url: "/og/shop.jpg", width: 1200, height: 630 }],
   },
   twitter: {

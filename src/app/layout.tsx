@@ -34,8 +34,9 @@ export const metadata: Metadata = {
     google: "eTUWPhodK0Lv2sK970oRWlhWy9QHQpbodWo0R1cHCq0",
   },
   // ページ側で openGraph/twitter を上書きしなければこれが使われる（既定値ゼロ対策）。
-  // 個別ページで images だけ差し替えたい場合は openGraph: { images: [...] } のみ書けば
-  // title/description/siteName/locale/type はここから継承される。
+  // 注意: ページで openGraph を書くと、ここの openGraph は**丸ごと置き換わる**（images だけ
+  // 書いても title/description/siteName/locale/type は継承されない。Next の
+  // generate-metadata.md「Overwriting fields」）。ページ側では全項目を書くこと（/tokushoho・/shop 参照）。
   openGraph: {
     title: "TAKUTO SUZUKI — Photographer",
     description: "Photography portfolio of Takuto Suzuki.",
